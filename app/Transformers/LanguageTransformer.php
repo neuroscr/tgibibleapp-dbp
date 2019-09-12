@@ -122,6 +122,7 @@ class LanguageTransformer extends BaseTransformer
                     'autonym'   => $language->autonym,
                     'bibles'    => $language->bibles_count,
                     'filesets'  => $language->filesets_count,
+                    'population'  => $language->population_count,
                 ];
                 if ($language->relationLoaded('translations')) {
                     $output['translations'] = $language->translations->pluck('name', 'language_translation_id');

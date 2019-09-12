@@ -97,14 +97,15 @@ class LanguagesController extends APIController
                 ->filterableByCountry($country)
                 ->filterableByIsoCode($code)
                 ->filterableByName($name)
-                ->orderBy('languages.id')
+                ->orderBy('languages.population','desc')
                 ->select([
                     'languages.id',
                     'languages.glotto_id',
                     'languages.iso',
                     'languages.name as backup_name',
                     'current_translation.name as name',
-                    'autonym.name as autonym'
+                    'autonym.name as autonym',
+                    'languages.population as population_count'
                 ])->withCount('bibles')->withCount('filesets')->get();
             return fractal($languages, new LanguageTransformer(), $this->serializer);
         });

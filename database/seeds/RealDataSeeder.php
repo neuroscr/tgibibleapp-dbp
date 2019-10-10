@@ -55,7 +55,9 @@ class RealDataSeeder extends Seeder
      */
     public function run()
     {
+        echo "Seeding Countries \n";
         $this->seedData('/countries/countries',                          Country::class);
+        echo "Seeding Languages \n";
         $this->seedData('/languages/language_status',                    LanguageStatus::class);
         $this->seedData('/languages/languages',                          Language::class);
         $this->seedData('/languages/language_translations',              LanguageTranslation::class);
@@ -65,18 +67,22 @@ class RealDataSeeder extends Seeder
         $this->seedData('/languages/alphabets',                          Alphabet::class);
         $this->seedData('/countries/country_translations',               CountryTranslation::class);
         $this->seedData('/countries/country_languages',                  CountryLanguage::class);
+        echo "Seeding Bibles \n";
         $this->seedData('/bibles/bibles',                                Bible::class);
         $this->seedData('/bibles/bibles_translations',                   BibleTranslation::class);
+        echo "Seeding Organizations \n";
         $this->seedData('/organizations/organizations',                  Organization::class);
         $this->seedData('/organizations/assets',                         Asset::class);
         $this->seedData('/organizations/organization_translations',      OrganizationTranslation::class);
         $this->seedData('/organizations/organization_logos',             OrganizationLogo::class);
         $this->seedData('/organizations/organization_relationships',     OrganizationRelationship::class);
+        echo "Seeding Bibles Books \n";
         $this->seedData('/bibles/bible_links',                           BibleLink::class);
         $this->seedData('/bibles/books',                                 Book::class);
         $this->seedData('/bibles/book_translations',                     BookTranslation::class);
         $this->seedData('/bibles/bible_books',                           BibleBook::class);
         $this->seedData('/bibles/bible_organization',                    BibleOrganization::class);
+        echo "Seeding Bibles Filesets \n";
         $this->seedData('/bibles/bible_fileset_sizes',                   BibleFilesetSize::class);
         $this->seedData('/bibles/bible_fileset_types',                   BibleFilesetType::class);
         $this->seedData('/bibles/bible_filesets',                        BibleFileset::class);
@@ -89,6 +95,7 @@ class RealDataSeeder extends Seeder
         $this->seedData('/bibles/bible_file_video_transport_stream',     StreamSegment::class);
         $this->seedData('/bibles/bible_organization',                    BibleOrganization::class);
         $this->seedData('/bibles/equivalents/bible-gateway',             BibleEquivalent::class);
+        echo "Seeding Access \n";
         $this->seedData('/access/access_groups',                         AccessGroup::class);
         $this->seedData('/access/access_types',                          AccessType::class);
         $this->seedData('/access/access_group_filesets',                 AccessGroupFileset::class);
@@ -100,15 +107,19 @@ class RealDataSeeder extends Seeder
         $subpath = (config('app.server_name') != 'LOCAL') ? 'https://raw.githubusercontent.com/digitalbiblesociety/dbp-seeds/master/' : '/Sites/dbp-seeds/';
         $parser = new Yaml();
         $current_object = new $object;
-        $entries = $parser->parse(file_get_contents($subpath.$path.'.yaml'));
+        $entries = $parser->parse(file_get_contents($subpath . $path . '.yaml'));
         $entries_count = count($entries);
         $current_count = 0;
         foreach ($entries as $entry) {
             $current_count++;
+            if ($path === '/bibles/bible_file_video_transport_stream') {
+                $entry['stream_bandwidth_id'] = $entry['video_resolution_id'];
+                unset($entry['video_resolution_id']);
+            }
             $current_object->create($entry);
 
             if ($current_count % 1000 === 0) {
-                echo "\n Seeded ".$current_count .' of '. $entries_count;
+                echo "\n Seeded " . $current_count . ' of ' . $entries_count;
             }
         }
     }

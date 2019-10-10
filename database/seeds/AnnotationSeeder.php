@@ -22,11 +22,13 @@ class AnnotationSeeder extends Seeder
         foreach ($users as $user) {
             $note_count = random_int(1, 20);
             while ($note_count > 0) {
+                $verse_start = random_int(1, 40);
                 $user->notes()->create([
                     'bible_id'    => $bibles->random()->id,
                     'book_id'     => $books->random()->id,
                     'chapter'     => random_int(1, 25),
-                    'verse_start' => random_int(1, 40),
+                    'verse_start' => $verse_start,
+                    'verse_end'   => $verse_start,
                     'notes'       => encrypt($faker->paragraph())
                 ]);
                 $note_count--;

@@ -30,5 +30,8 @@ class DatabaseSeeder extends Seeder
 
         echo "Seeding Annotation \n";
         $this->call(AnnotationSeeder::class);
+        
+        echo "Seeding Plans / Playlists \n";
+        $this->call(PlansPlaylistsSeeder::class);
     }
 }

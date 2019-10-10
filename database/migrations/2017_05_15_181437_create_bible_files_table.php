@@ -79,7 +79,7 @@ class CreateBibleFilesTable extends Migration
             \Schema::connection('dbp')->create('bible_file_video_transport_stream', function (Blueprint $table) {
                 $table->increments('id');
                 $table->integer('video_resolution_id')->unsigned();
-                $table->foreign('video_resolution_id', 'FK_video_resolutions_video_transport_stream')->references('id')->on(config('database.connections.dbp.database').'.bible_file_video_resolutions')->onUpdate('cascade')->onDelete('cascade');
+                $table->foreign('video_resolution_id', 'FK_bible_file_video_resolutions_bible_file_video_transport_strea')->references('id')->on(config('database.connections.dbp.database').'.bible_file_video_resolutions')->onUpdate('cascade')->onDelete('cascade');
                 $table->string('file_name')->unique();
                 $table->float('runtime');
                 $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));

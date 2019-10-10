@@ -17,8 +17,9 @@ class ProjectsSeeder extends Seeder
      */
     public function run(Faker $faker)
     {
+        $database_connection = config('database.connections.dbp_users.database') . '.';
         Project::create([
-            'id'              => unique_random('projects', 'id'),
+            'id'              => unique_random($database_connection . 'projects', 'id'),
             'name'            => 'Digital Bible Platform',
             'url_avatar'      => $faker->url,
             'url_avatar_icon' => $faker->url,
@@ -42,8 +43,8 @@ class ProjectsSeeder extends Seeder
             ProjectOauthProvider::create([
                 'name'          => 'facebook',
                 'project_id'    => $project_count,
-                'client_id'     => unique_random('project_oauth_providers', 'client_id'),
-                'client_secret' => unique_random('project_oauth_providers', 'client_secret'),
+                'client_id'     => unique_random($database_connection . 'project_oauth_providers', 'client_id'),
+                'client_secret' => unique_random($database_connection . 'project_oauth_providers', 'client_secret'),
                 'callback_url'  => 'https://dbp4.org/login/callback/facebook',
                 'description'   => (string) $faker->paragraph(),
             ]);
@@ -51,8 +52,8 @@ class ProjectsSeeder extends Seeder
             ProjectOauthProvider::create([
                 'name'          => 'google',
                 'project_id'    => $project_count,
-                'client_id'     => unique_random('project_oauth_providers', 'client_id'),
-                'client_secret' => unique_random('project_oauth_providers', 'client_secret'),
+                'client_id'     => unique_random($database_connection . 'project_oauth_providers', 'client_id'),
+                'client_secret' => unique_random($database_connection . 'project_oauth_providers', 'client_secret'),
                 'callback_url'  => 'https://dbp4.org/login/callback/google',
                 'description'   => (string) $faker->paragraph(),
             ]);

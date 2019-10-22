@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3251cd7f75db1507de9a44e913e1bb4a",
+    "content-hash": "e585e4e7683071b6dd53914883e44d71",
     "packages": [
         {
             "name": "algolia/algoliasearch-client-php",
@@ -4938,6 +4938,63 @@
                 "transform"
             ],
             "time": "2019-02-27T10:49:15+00:00"
+        },
+        {
+            "name": "stripe/stripe-php",
+            "version": "v7.5.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/stripe/stripe-php.git",
+                "reference": "85876d9a2189ef6db03e9d27c1e0bf234ea89e54"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/stripe/stripe-php/zipball/85876d9a2189ef6db03e9d27c1e0bf234ea89e54",
+                "reference": "85876d9a2189ef6db03e9d27c1e0bf234ea89e54",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-json": "*",
+                "ext-mbstring": "*",
+                "php": ">=5.6.0"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^2.15",
+                "php-coveralls/php-coveralls": "^2.1",
+                "phpunit/phpunit": "^5.7",
+                "squizlabs/php_codesniffer": "^3.3",
+                "symfony/process": "~3.4"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.0-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Stripe\\": "lib/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Stripe and contributors",
+                    "homepage": "https://github.com/stripe/stripe-php/contributors"
+                }
+            ],
+            "description": "Stripe PHP Library",
+            "homepage": "https://stripe.com/",
+            "keywords": [
+                "api",
+                "payment processing",
+                "stripe"
+            ],
+            "time": "2019-10-18T17:20:19+00:00"
         },
         {
             "name": "sunra/php-simple-html-dom-parser",

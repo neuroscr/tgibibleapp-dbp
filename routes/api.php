@@ -254,3 +254,9 @@ Route::name('v4_plans_days.store')
     ->middleware('APIToken:check')->post('plans/{plan_id}/day',                     'Plan\PlansController@storeDay');
 Route::name('v4_plans_days.complete')
     ->middleware('APIToken:check')->post('plans/day/{day_id}/complete',             'Plan\PlansController@completeDay');
+
+// VERSION 4 | Payments
+Route::name('v4_payments.charge')
+    ->middleware('APIToken')->post('payments',                                      'Payment\PaymentsController@charge');
+Route::name('v4_payments.show')
+    ->middleware('APIToken')->get('payments/{payment_id}',                          'Payment\PaymentsController@show');

@@ -32,6 +32,7 @@
         "spatie/array-to-xml": "^2.7",
         "spatie/eloquent-sortable": "^3.6",
         "spatie/laravel-fractal": "^5.2",
+        "stripe/stripe-php": "^7.5",
         "sunra/php-simple-html-dom-parser": "^1.5",
         "symfony/process": "^4.1",
         "symfony/psr-http-message-bridge": "^1.0",

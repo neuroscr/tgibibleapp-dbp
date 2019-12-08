@@ -100,7 +100,13 @@ class VideoStreamController extends APIController
 
         $cache_string = 'arclight_media_components_' . $chapter_id . $language_id;
         $stream_file  = \Cache::remember($cache_string, now()->addDay(), function () use ($chapter_id, $language_id) {
-            $media_components = $this->fetchArclight('media-components/' . $chapter_id . '/languages/' . $language_id, $language_id, false);
+            try {
+                $media_components = $this->fetchArclight('media-components/' . $chapter_id . '/languages/' . $language_id, $language_id, false);
+            } catch (\Exception $e) {
+                $language_id = 529;
+                $media_components = $this->fetchArclight('media-components/' . $chapter_id . '/languages/' . $language_id, $language_id, false);
+            }
+
             return file_get_contents($media_components->streamingUrls->m3u8[0]->url);
         });
 

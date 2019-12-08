@@ -57,7 +57,7 @@ class VideoStreamController extends APIController
         $metadataLanguageTag = isset($media_languages->bcp47) ? $media_languages->bcp47 : '';
 
         $metadata = \Cache::remember($cache_string, now()->addDay(), function () use ($arclight_id, $metadataLanguageTag) {
-            $media_components = $this->fetchArclight('media-components', $arclight_id, true, 'metadataLanguageTags=' . $metadataLanguageTag . ',en');
+            $media_components = $this->fetchArclight('media-components', $arclight_id . ',529', true, 'metadataLanguageTags=' . $metadataLanguageTag . ',en');
             $metadata = collect($media_components->mediaComponents)
                 ->map(function ($component) use ($arclight_id) {
                     return [

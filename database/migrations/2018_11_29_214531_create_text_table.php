@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
 
 class CreateTextTable extends Migration
 {
@@ -26,7 +27,7 @@ class CreateTextTable extends Migration
                 $table->text('verse_text');
                 $table->unique(['hash_id', 'book_id', 'chapter', 'verse_start'], 'unique_text_reference');
             });
-            \DB::connection('dbp')->statement('ALTER TABLE bible_verses ADD FULLTEXT fulltext_index(verse_text)');
+            DB::connection('dbp')->statement('ALTER TABLE bible_verses ADD FULLTEXT fulltext_index(verse_text)');
         }
 
         if (!Schema::connection('dbp')->hasTable('bible_strongs')) {

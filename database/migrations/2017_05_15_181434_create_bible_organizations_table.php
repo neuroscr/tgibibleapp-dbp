@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\Schema;
 
 class CreateBibleOrganizationsTable extends Migration
 {
@@ -11,15 +12,14 @@ class CreateBibleOrganizationsTable extends Migration
      */
     public function up()
     {
-        if (!\Schema::connection('dbp')->hasTable('bible_organizations')) {
-            \Schema::connection('dbp')->create('bible_organizations', function ($table) {
+        if (!Schema::connection('dbp')->hasTable('bible_organizations')) {
+            Schema::connection('dbp')->create('bible_organizations', function ($table) {
                 $table->string('bible_id', 12)->nullable();
-                $table->foreign('bible_id', 'FK_bibles_bible_organizations')->references('id')->on(config('database.connections.dbp.database').'.bibles')->onDelete('cascade')->onUpdate('cascade');
+                $table->foreign('bible_id', 'FK_bibles_bible_organizations')->references('id')->on(config('database.connections.dbp.database') . '.bibles')->onDelete('cascade')->onUpdate('cascade');
                 $table->integer('organization_id')->unsigned()->nullable();
-                $table->foreign('organization_id', 'FK_organizations_bible_organizations')->references('id')->on(config('database.connections.dbp.database').'.organizations');
+                $table->foreign('organization_id', 'FK_organizations_bible_organizations')->references('id')->on(config('database.connections.dbp.database') . '.organizations');
                 $table->string('relationship_type');
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
     }
@@ -31,6 +31,6 @@ class CreateBibleOrganizationsTable extends Migration
      */
     public function down()
     {
-        \Schema::connection('dbp')->dropIfExists('bible_organizations');
+        Schema::connection('dbp')->dropIfExists('bible_organizations');
     }
 }

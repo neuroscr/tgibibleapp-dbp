@@ -13,7 +13,7 @@ class CreateCommentaryTables extends Migration
      */
     public function up()
     {
-        if (!\Schema::connection('dbp')->hasTable('verse_references')) {
+        if (!Schema::connection('dbp')->hasTable('verse_references')) {
             Schema::connection('dbp')->create('verse_references', function (Blueprint $table) {
                 $table->increments('id');
                 $table->char('book_id', 3);
@@ -25,7 +25,7 @@ class CreateCommentaryTables extends Migration
             });
         }
 
-        if (!\Schema::connection('dbp')->hasTable('commentaries')) {
+        if (!Schema::connection('dbp')->hasTable('commentaries')) {
             Schema::connection('dbp')->create('commentaries', function (Blueprint $table) {
                 $table->string('id', 12)->primary();
                 $table->string('type', 12); // critical, devotional, pastoral, exegetical
@@ -37,8 +37,8 @@ class CreateCommentaryTables extends Migration
             });
         }
 
-        if (!\Schema::connection('dbp')->hasTable('commentary_translations')) {
-            \Schema::connection('dbp')->create('commentary_translations', function (Blueprint $table) {
+        if (!Schema::connection('dbp')->hasTable('commentary_translations')) {
+            Schema::connection('dbp')->create('commentary_translations', function (Blueprint $table) {
                 $table->increments('id');
                 $table->integer('language_id')->unsigned();
                 $table->foreign('language_id', 'FK_languages_commentary_translations')->references('id')->on(config('database.connections.dbp.database') . '.languages')->onDelete('cascade')->onUpdate('cascade');
@@ -47,13 +47,12 @@ class CreateCommentaryTables extends Migration
                 $table->boolean('vernacular')->default(false);
                 $table->string('name');
                 $table->text('description')->nullable();
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
 
-        if (!\Schema::connection('dbp')->hasTable('commentary_sections')) {
-            \Schema::connection('dbp')->create('commentary_sections', function (Blueprint $table) {
+        if (!Schema::connection('dbp')->hasTable('commentary_sections')) {
+            Schema::connection('dbp')->create('commentary_sections', function (Blueprint $table) {
                 $table->increments('id');
                 $table->string('commentary_id', 12);
                 $table->foreign('commentary_id', 'FK_commentaries_commentary_sections')->references('id')->on(config('database.connections.dbp.database') . '.commentaries')->onUpdate('cascade')->onDelete('cascade');
@@ -65,23 +64,21 @@ class CreateCommentaryTables extends Migration
                 $table->tinyInteger('chapter_end')->unsigned()->nullable();
                 $table->tinyInteger('verse_start')->unsigned()->nullable();
                 $table->tinyInteger('verse_end')->unsigned()->nullable();
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
 
-        if (!\Schema::connection('dbp')->hasTable('glossary_person')) {
+        if (!Schema::connection('dbp')->hasTable('glossary_person')) {
             Schema::connection('dbp')->create('glossary_person', function (Blueprint $table) {
                 $table->string('id', 24)->primary();
                 $table->string('description', 120);
                 $table->string('born', 12)->nullable();
                 $table->string('died', 12)->nullable();
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
 
-        if (!\Schema::connection('dbp')->hasTable('glossary_person_names')) {
+        if (!Schema::connection('dbp')->hasTable('glossary_person_names')) {
             Schema::connection('dbp')->create('glossary_person_names', function (Blueprint $table) {
                 $table->increments('id');
                 $table->string('person_id', 24);
@@ -91,24 +88,22 @@ class CreateCommentaryTables extends Migration
                 $table->string('ot_ketiv_translated')->nullable();
                 $table->string('ot_qere_translated')->nullable();
                 $table->string('nt_variant_translated')->nullable();
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
 
-        if (!\Schema::connection('dbp')->hasTable('glossary_person_name_references')) {
+        if (!Schema::connection('dbp')->hasTable('glossary_person_name_references')) {
             Schema::connection('dbp')->create('glossary_person_name_references', function (Blueprint $table) {
                 $table->increments('id');
                 $table->integer('person_name_id')->unsigned();
                 $table->foreign('person_name_id', 'FK_glossary_person_name_reference')->references('id')->on(config('database.connections.dbp.database') . '.glossary_person_name_references')->onUpdate('cascade')->onDelete('cascade');
                 $table->integer('verse_reference_id')->unsigned();
                 $table->foreign('verse_reference_id', 'FK_verse_references_glossary_reference')->references('id')->on(config('database.connections.dbp.database') . '.verse_references')->onUpdate('cascade')->onDelete('cascade');
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
 
-        if (!\Schema::connection('dbp')->hasTable('glossary_person_translation')) {
+        if (!Schema::connection('dbp')->hasTable('glossary_person_translation')) {
             Schema::connection('dbp')->create('glossary_person_translation', function (Blueprint $table) {
                 $table->increments('id');
                 $table->string('person_id', 24);
@@ -117,12 +112,11 @@ class CreateCommentaryTables extends Migration
                 $table->foreign('bible_id', 'FK_bibles_glossary_person_translation')->references('id')->on(config('database.connections.dbp.database') . '.bibles')->onUpdate('cascade')->onDelete('cascade');
                 $table->string('name');
                 $table->unique(['person_id', 'bible_id', 'name'], 'unique_name_reference');
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
 
-        if (!\Schema::connection('dbp')->hasTable('glossary_person_relationships')) {
+        if (!Schema::connection('dbp')->hasTable('glossary_person_relationships')) {
             Schema::connection('dbp')->create('glossary_person_relationships', function (Blueprint $table) {
                 $table->increments('id');
                 $table->string('person_id', 24);
@@ -130,8 +124,7 @@ class CreateCommentaryTables extends Migration
                 $table->string('related_person_id', 12);
                 $table->foreign('related_person_id', 'FK_related_person_glossary_person_translation')->references('id')->on(config('database.connections.dbp.database') . '.glossary_person')->onUpdate('cascade')->onDelete('cascade');
                 $table->string('relationship_type', 24);
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
     }
@@ -143,12 +136,13 @@ class CreateCommentaryTables extends Migration
      */
     public function down()
     {
-        Schema::connection('dbp')->dropIfExists('commentary_sections');
-        Schema::connection('dbp')->dropIfExists('commentary_translations');
-        Schema::connection('dbp')->dropIfExists('commentaries');
         Schema::connection('dbp')->dropIfExists('verse_references');
+        Schema::connection('dbp')->dropIfExists('commentaries');
+        Schema::connection('dbp')->dropIfExists('commentary_translations');
+        Schema::connection('dbp')->dropIfExists('commentary_sections');
         Schema::connection('dbp')->dropIfExists('glossary_person');
-        Schema::connection('dbp')->dropIfExists('glossary_person_name');
+        Schema::connection('dbp')->dropIfExists('glossary_person_names');
+        Schema::connection('dbp')->dropIfExists('glossary_person_name_references');
         Schema::connection('dbp')->dropIfExists('glossary_person_translation');
         Schema::connection('dbp')->dropIfExists('glossary_person_relationships');
     }

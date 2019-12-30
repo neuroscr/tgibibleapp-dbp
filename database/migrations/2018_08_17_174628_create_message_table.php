@@ -25,8 +25,7 @@ class CreateMessageTable extends Migration
                 $table->string('subject');
                 $table->string('purpose');
                 $table->text('message');
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
 
@@ -39,8 +38,7 @@ class CreateMessageTable extends Migration
                 $table->foreign('user_id', 'FK_messages_users')->references('id')->on(config('database.connections.dbp_users.database').'.users')->onDelete('cascade')->onUpdate('cascade');
                 $table->string('subject');
                 $table->text('message');
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
     }

@@ -13,7 +13,7 @@ class CreateLexiconTable extends Migration
      */
     public function up()
     {
-        if (!\Schema::connection('dbp')->hasTable('lexicons')) {
+        if (!Schema::connection('dbp')->hasTable('lexicons')) {
             Schema::connection('dbp')->create('lexicons', function (Blueprint $table) {
                 $table->char('id', 5)->primary();
                 $table->string('base_word', 64);
@@ -27,7 +27,7 @@ class CreateLexiconTable extends Migration
             });
         }
 
-        if (!\Schema::connection('dbp')->hasTable('lexical_definitions')) {
+        if (!Schema::connection('dbp')->hasTable('lexical_definitions')) {
             Schema::connection('dbp')->create('lexical_definitions', function (Blueprint $table) {
                 $table->increments('id');
                 $table->char('lexicon_id', 5);
@@ -39,7 +39,7 @@ class CreateLexiconTable extends Migration
             });
         }
 
-        if (!\Schema::connection('dbp')->hasTable('lexical_lexemes')) {
+        if (!Schema::connection('dbp')->hasTable('lexical_lexemes')) {
             Schema::connection('dbp')->create('lexical_lexemes', function (Blueprint $table) {
                 $table->string('id', 16);
                 $table->string('type_of_speech', 64);
@@ -48,7 +48,7 @@ class CreateLexiconTable extends Migration
             });
         }
 
-        if (!\Schema::connection('dbp')->hasTable('lexical_pronunciations')) {
+        if (!Schema::connection('dbp')->hasTable('lexical_pronunciations')) {
             Schema::connection('dbp')->create('lexical_pronunciations', function (Blueprint $table) {
                 $table->char('lexicon_id', 5)->primary();
                 $table->foreign('lexicon_id', 'FK_lexicons_lexical_pronunciations')->references('id')->on(config('database.connections.dbp.database') . '.lexicons')->onUpdate('cascade')->onDelete('cascade');
@@ -70,7 +70,8 @@ class CreateLexiconTable extends Migration
     public function down()
     {
         Schema::dropIfExists('lexical_pronunciations');
+        Schema::dropIfExists('lexical_lexemes');
         Schema::dropIfExists('lexical_definitions');
-        Schema::dropIfExists('lexicon');
+        Schema::dropIfExists('lexicons');
     }
 }

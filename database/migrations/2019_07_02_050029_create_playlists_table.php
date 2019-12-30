@@ -17,12 +17,13 @@ class CreatePlaylistsTable extends Migration
             Schema::connection('dbp_users')->create('user_playlists', function (Blueprint $table) {
                 $table->bigIncrements('id');
                 $table->string('name');
+                $table->string('thumbnail', 191)->nullable()->default(null);
                 $table->boolean('featured')->default(false);
                 $table->integer('user_id')->unsigned();
-                $table->foreign('user_id', 'FK_user_playlists')->references('id')->on(config('database.connections.dbp_users.database').'.users')->onDelete('cascade')->onUpdate('cascade');
+                $table->foreign('user_id', 'FK_user_playlists')->references('id')->on(config('database.connections.dbp_users.database') . '.users')->onDelete('cascade')->onUpdate('cascade');
+                $table->string('external_content', 200)->default('');
                 $table->softDeletes();
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
     }

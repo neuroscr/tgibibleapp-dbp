@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
 
 class CreatePlansTable extends Migration
 {
@@ -22,8 +23,7 @@ class CreatePlansTable extends Migration
                 $table->date('suggested_start_date');
                 $table->foreign('user_id', 'FK_plans')->references('id')->on(config('database.connections.dbp_users.database') . '.users')->onDelete('cascade')->onUpdate('cascade');
                 $table->softDeletes();
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
 
@@ -34,8 +34,7 @@ class CreatePlansTable extends Migration
                 $table->foreign('plan_id', 'FK_plan_plan_days')->references('id')->on(config('database.connections.dbp_users.database') . '.plans')->onDelete('cascade')->onUpdate('cascade');
                 $table->bigInteger('playlist_id')->unsigned()->nullable();
                 $table->foreign('playlist_id', 'FK_playlist_plan_days')->references('id')->on(config('database.connections.dbp_users.database') . '.user_playlists')->onDelete('cascade')->onUpdate('cascade');
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
                 $table->integer('order_column');
             });
         }
@@ -51,11 +50,11 @@ class CreatePlansTable extends Migration
                 $table->foreign('book_id', 'FK_books_plan_days_items')->references('id')->on(config('database.connections.dbp.database') . '.books');
                 $table->integer('chapter_start')->unsigned();
                 $table->integer('chapter_end')->unsigned()->nullable();
-                $table->integer('verse_start')->unsigned();
+                $table->integer('verse_start')->unsigned()->nullable();
                 $table->integer('verse_end')->unsigned()->nullable();
+                $table->integer('verses')->unsigned();
                 $table->integer('duration');
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
                 $table->integer('order_column');
             });
         }
@@ -69,8 +68,7 @@ class CreatePlansTable extends Migration
                 $table->foreign('plan_id', 'FK_plans_user_plans')->references('id')->on(config('database.connections.dbp_users.database') . '.plans')->onDelete('cascade')->onUpdate('cascade');
                 $table->date('start_date')->nullable();
                 $table->integer('percentage_completed');
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
 

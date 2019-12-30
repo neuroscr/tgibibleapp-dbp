@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
 
 class CreateAlphabetsTable extends Migration
 {
@@ -38,8 +39,7 @@ class CreateAlphabetsTable extends Migration
                 $table->text('sample')->nullable();
                 $table->string('sample_img')->nullable();
                 $table->text('description')->nullable();
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
 
@@ -48,31 +48,28 @@ class CreateAlphabetsTable extends Migration
                 $table->string('id', 20)->primary();
                 $table->text('description')->nullable();
                 $table->text('notes')->nullable();
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
 
         if (!Schema::connection('dbp')->hasTable('alphabet_numeral_systems')) {
             Schema::connection('dbp')->create('alphabet_numeral_systems', function (Blueprint $table) {
                 $table->char('numeral_system_id', 20)->index();
-                $table->foreign('numeral_system_id', 'FK_numeral_systems_alphabet_numeral_systems')->references('id')->on(config('database.connections.dbp.database').'.numeral_systems')->onUpdate('cascade');
+                $table->foreign('numeral_system_id', 'FK_numeral_systems_alphabet_numeral_systems')->references('id')->on(config('database.connections.dbp.database') . '.numeral_systems')->onUpdate('cascade');
                 $table->char('script_id', 4)->nullable();
-                $table->foreign('script_id', 'FK_alphabets_alphabet_numeral_systems')->references('script')->on(config('database.connections.dbp.database').'.alphabets')->onUpdate('cascade');
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->foreign('script_id', 'FK_alphabets_alphabet_numeral_systems')->references('script')->on(config('database.connections.dbp.database') . '.alphabets')->onUpdate('cascade');
+                $table->timestamps();
             });
         }
 
         if (!Schema::connection('dbp')->hasTable('numeral_system_glyphs')) {
             Schema::connection('dbp')->create('numeral_system_glyphs', function (Blueprint $table) {
                 $table->char('numeral_system_id', 20)->index();
-                $table->foreign('numeral_system_id', 'FK_numeral_systems_numeral_system_glyphs')->references('id')->on(config('database.connections.dbp.database').'.numeral_systems')->onUpdate('cascade');
+                $table->foreign('numeral_system_id', 'FK_numeral_systems_numeral_system_glyphs')->references('id')->on(config('database.connections.dbp.database') . '.numeral_systems')->onUpdate('cascade');
                 $table->tinyInteger('value')->unsigned();
                 $table->string('glyph', 8);
                 $table->string('numeral_written', 8)->nullable();
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
             DB::connection('dbp')->statement('ALTER TABLE numeral_system_glyphs ADD CONSTRAINT uq_numeral_system_glyph UNIQUE(`numeral_system_id`, `value`, `glyph`)');
         }
@@ -81,11 +78,10 @@ class CreateAlphabetsTable extends Migration
             Schema::connection('dbp')->create('alphabet_language', function (Blueprint $table) {
                 $table->increments('id');
                 $table->char('script_id', 4)->index();
-                $table->foreign('script_id', 'FK_alphabets_alphabet_language')->references('script')->on(config('database.connections.dbp.database').'.alphabets')->onUpdate('cascade');
+                $table->foreign('script_id', 'FK_alphabets_alphabet_language')->references('script')->on(config('database.connections.dbp.database') . '.alphabets')->onUpdate('cascade');
                 $table->integer('language_id')->unsigned();
-                $table->foreign('language_id', 'FK_languages_alphabet_language')->references('id')->on(config('database.connections.dbp.database').'.languages')->onUpdate('cascade');
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->foreign('language_id', 'FK_languages_alphabet_language')->references('id')->on(config('database.connections.dbp.database') . '.languages')->onUpdate('cascade');
+                $table->timestamps();
             });
         }
 
@@ -93,7 +89,7 @@ class CreateAlphabetsTable extends Migration
             Schema::connection('dbp')->create('alphabet_fonts', function (Blueprint $table) {
                 $table->increments('id');
                 $table->char('script_id', 4);
-                $table->foreign('script_id', 'FK_alphabets_alphabet_fonts')->references('script')->on(config('database.connections.dbp.database').'.alphabets')->onUpdate('cascade');
+                $table->foreign('script_id', 'FK_alphabets_alphabet_fonts')->references('script')->on(config('database.connections.dbp.database') . '.alphabets')->onUpdate('cascade');
                 $table->string('font_name');
                 $table->string('font_filename');
                 $table->integer('font_weight')->unsigned()->nullable()->default(null);
@@ -101,8 +97,7 @@ class CreateAlphabetsTable extends Migration
                 $table->string('url')->nullable()->default(null);
                 $table->text('notes')->nullable()->default(null);
                 $table->boolean('italic')->default(0);
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
     }

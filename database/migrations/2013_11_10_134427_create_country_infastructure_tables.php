@@ -16,7 +16,7 @@ class CreateCountryInfastructureTables extends Migration
         if (!Schema::connection('dbp')->hasTable('country_energy')) {
             Schema::connection('dbp')->create('country_energy', function (Blueprint $table) {
                 $table->char('country_id', 2);
-                $table->foreign('country_id', 'FK_countries_country_energy')->references('id')->on(config('database.connections.dbp.database').'.countries')->onUpdate('cascade');
+                $table->foreign('country_id', 'FK_countries_country_energy')->references('id')->on(config('database.connections.dbp.database') . '.countries')->onUpdate('cascade');
                 $table->string('electricity_production');           // "Electricity - production"
                 $table->string('electricity_consumption');          // "Electricity - consumption"
                 $table->string('electricity_exports');              // "Electricity - exports"
@@ -40,15 +40,14 @@ class CreateCountryInfastructureTables extends Migration
                 $table->string('natural_gas_imports');              // "Natural gas - imports"
                 $table->string('natural_gas_reserves');             // "Natural gas - proved reserves"
                 $table->string('co2_output');                       // "Carbon dioxide emissions from consumption of energy"
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
 
         if (!Schema::connection('dbp')->hasTable('country_communications')) {
             Schema::connection('dbp')->create('country_communications', function (Blueprint $table) {
                 $table->char('country_id', 2);
-                $table->foreign('country_id', 'FK_countries_country_communications')->references('id')->on(config('database.connections.dbp.database').'.countries')->onUpdate('cascade');
+                $table->foreign('country_id', 'FK_countries_country_communications')->references('id')->on(config('database.connections.dbp.database') . '.countries')->onUpdate('cascade');
                 $table->string('fixed_phones_total');                           // "Telephones - fixed lines" | "total subscriptions"
                 $table->string('fixed_phones_subs_per_100');                    // "Telephones - fixed lines" | "subscriptions per 100 inhabitants"
                 $table->string('mobile_phones_total');                          // "Telephones - mobile cellular" | "total"
@@ -60,15 +59,14 @@ class CreateCountryInfastructureTables extends Migration
                 $table->char('internet_country_code', 2);                       // "Internet country code"
                 $table->string('internet_total_users');                         // "Internet users" | "total"
                 $table->decimal('internet_population_percent', 4, 1)->unsigned(); // "Internet users" | "percent of population"
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
 
         if (!Schema::connection('dbp')->hasTable('country_transportation')) {
             Schema::connection('dbp')->create('country_transportation', function (Blueprint $table) {
                 $table->char('country_id', 2);
-                $table->foreign('country_id', 'FK_countries_country_transportation')->references('id')->on(config('database.connections.dbp.database').'.countries')->onUpdate('cascade');
+                $table->foreign('country_id', 'FK_countries_country_transportation')->references('id')->on(config('database.connections.dbp.database') . '.countries')->onUpdate('cascade');
                 $table->integer('air_carriers')->unsigned()->nullable();            // "National air transport system" | "number of registered air carriers"
                 $table->integer('aircraft')->unsigned()->nullable();                // "National air transport system" | "inventory of registered aircraft operated by air carriers"
                 $table->integer('aircraft_passengers')->nullable()->unsigned();     // "annual passenger traffic on registered air carriers"
@@ -80,15 +78,14 @@ class CreateCountryInfastructureTables extends Migration
                 $table->string('major_seaports')->nullable();                       // "Ports and terminals"
                 $table->string('oil_terminals')->nullable();                        // "oil terminal(s)"
                 $table->string('cruise_ports')->nullable();                         // "cruise port(s)"
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
 
         if (!Schema::connection('dbp')->hasTable('country_economy')) {
             Schema::connection('dbp')->create('country_economy', function (Blueprint $table) {
                 $table->char('country_id', 2);
-                $table->foreign('country_id', 'FK_countries_country_economy')->references('id')->on(config('database.connections.dbp.database').'.countries')->onUpdate('cascade');
+                $table->foreign('country_id', 'FK_countries_country_economy')->references('id')->on(config('database.connections.dbp.database') . '.countries')->onUpdate('cascade');
                 $table->text('overview');                             // "Economy - overview"
                 $table->string('gdp_power_parity');                   // "GDP (purchasing power parity)"
                 $table->string('gdp_real_growth');                    // "GDP - real growth rate"
@@ -134,8 +131,7 @@ class CreateCountryInfastructureTables extends Migration
                 $table->text('imports_commodities');                  // "Imports - commodities"
                 $table->string('imports_partners');                   // "Imports - partners"
                 $table->string('exchange_rates');                     // "Exchange rates"
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
 
@@ -143,12 +139,11 @@ class CreateCountryInfastructureTables extends Migration
         if (!Schema::connection('dbp')->hasTable('country_issues')) {
             Schema::connection('dbp')->create('country_issues', function (Blueprint $table) {
                 $table->char('country_id', 2);
-                $table->foreign('country_id', 'FK_countries_country_issues')->references('id')->on(config('database.connections.dbp.database').'.countries')->onUpdate('cascade');
+                $table->foreign('country_id', 'FK_countries_country_issues')->references('id')->on(config('database.connections.dbp.database') . '.countries')->onUpdate('cascade');
                 $table->text('international_disputes');   // "Disputes - international"
                 $table->text('illicit_drugs');            // "Illicit drugs"
                 $table->text('refugees');                 // "Refugees and internally displaced persons" | "refugees (country of origin)"
-                $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-                $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+                $table->timestamps();
             });
         }
     }

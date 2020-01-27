@@ -349,7 +349,7 @@ class BiblesController extends APIController
 
                 return $books->map(function ($book) use ($active_books) {
                     if (isset($active_books[$book->book_id])) {
-                        $book->content_types = array_unique($active_books[$book->book_id]);
+                        $book->content_types = array_values(array_unique($active_books[$book->book_id]));
                     }
                     return $book;
                 })->filter(function ($book) {

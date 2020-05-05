@@ -94,9 +94,9 @@ class PlansController extends APIController
         $sort_dir   = checkParam('sort_dir') ?? 'asc';
 
         if ($featured) {
-            $cache_string = generateCacheString('v4_plan_index', [$featured, $limit, $sort_by, $sort_dir]);
+            $cache_string = generateCacheString('v4_plan_index', [$featured, $limit, $sort_by, $sort_dir, '-temp-empty']);
             $plans = \Cache::remember($cache_string, now()->addDay(), function () use ($featured, $limit, $sort_by, $sort_dir, $user) {
-                return $this->getPlans($featured, $limit, $sort_by, $sort_dir, $user);
+                return Plan::whereId(0)->paginate($limit);
             });
             return $this->reply($plans);
         }

@@ -85,28 +85,11 @@ class CountriesController extends APIController
         $asset_id = checkParam('asset_id') ?? config('filesystems.disks.s3_fcbh.bucket');
         $languages = checkParam('include_languages');
 
-        $cache_string = strtolower('countries_' . $GLOBALS['i18n_iso'] . $filesets . $asset_id . $languages);
+        $cache_string = strtolower('countries_' . $GLOBALS['i18n_iso'] . $filesets . $asset_id . $languages) . '-temp-empty';
+        ;
 
         $countries = \Cache::remember($cache_string, now()->addDay(), function () use ($filesets, $asset_id, $languages) {
-            $countries = Country::with('currentTranslation')->when($filesets, function ($query) use ($asset_id) {
-                $query->whereHas('languages.bibles.filesets', function ($query) use ($asset_id) {
-                    if ($asset_id) {
-                        $query->where('asset_id', $asset_id);
-                    }
-                });
-            })->get();
-            if ($languages !== null) {
-                $countries->load([
-                    'languagesFiltered' => function ($query) use ($languages) {
-                        $query->orderBy('country_language.population', 'desc');
-                        if ($languages === 'with_names') {
-                            $query->with(['translation' => function ($query) {
-                                $query->where('language_translation_id', $GLOBALS['i18n_id']);
-                            }]);
-                        }
-                    },
-                ]);
-            }
+            $countries = Country::whereId(0);
             return fractal()->collection($countries)->transformWith(new CountryTransformer());
         });
         return $this->reply($countries);

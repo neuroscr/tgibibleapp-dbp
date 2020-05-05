@@ -111,9 +111,9 @@ class PlaylistsController extends APIController
         }
 
         if ($featured) {
-            $cache_string = generateCacheString('v4_playlist_index', [$show_details, $featured, $sort_by, $sort_dir, $limit, $show_text]);
+            $cache_string = generateCacheString('v4_playlist_index', [$show_details, $featured, $sort_by, $sort_dir, $limit, $show_text, '-temp-empty']);
             $playlists = \Cache::remember($cache_string, now()->addDay(), function () use ($show_details, $user, $featured, $sort_by, $sort_dir, $limit, $show_text) {
-                return $this->getPlaylists($show_details, $user, $featured, $sort_by, $sort_dir, $limit, $show_text);
+                return Playlist::whereId(0)->paginate($limit);
             });
             return $this->reply($playlists);
         }

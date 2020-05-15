@@ -382,8 +382,8 @@ class TextController extends APIController
             ->leftJoin('playlists_followers as playlists_followers', function ($join) use ($user) {
                 $join->on('playlists_followers.playlist_id', '=', 'user_playlists.id')->where('playlists_followers.user_id', $user->id);
             })
-            ->whereNotIn('id', function ($query) {
-                $query->select('playlist_id')->from('plan_days');
+            ->leftJoin('plan_days', function ($join) {
+                $join->on('plan_days.playlist_id', '=', 'user_playlists.id')->whereNull('plan_days.playlist_id');
             })
             ->where('user_playlists.user_id', $user->id)
             ->orWhere('playlists_followers.user_id', $user->id)

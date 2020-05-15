@@ -134,8 +134,8 @@ class PlaylistsController extends APIController
                 $user_id = empty($user) ? 0 : $user->id;
                 $join->on('playlists_followers.playlist_id', '=', 'user_playlists.id')->where('playlists_followers.user_id', $user_id);
             })
-            ->whereNotIn('id', function ($query) {
-                $query->select('playlist_id')->from('plan_days');
+            ->leftJoin('plan_days', function ($join) {
+                $join->on('plan_days.playlist_id', '=', 'user_playlists.id')->whereNull('plan_days.playlist_id');
             })
             ->when($featured || empty($user), function ($q) {
                 $q->where('user_playlists.featured', '1');

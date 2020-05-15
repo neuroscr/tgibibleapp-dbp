@@ -169,19 +169,22 @@ class PlansController extends APIController
             'user_id'               => $user->id,
             'name'                  => $name,
             'featured'              => false,
-            'suggested_start_date'  => $suggested_start_date
+            'suggested_start_date'  => $suggested_start_date ?? ''
         ]);
 
         for ($i = 0; $i < intval($days); $i++) {
-            $playlist = Playlist::create([
-                'user_id'               => $user->id,
-            ]);
-
-            PlanDay::create([
-                'plan_id'               => $plan->id,
-                'playlist_id'           => $playlist->id,
-            ]);
+            $data[] = ['name' => 'plan_' . $plan->id, 'user_id' => $user->id];
         }
+        Playlist::insert($data);
+        $new_playlists = Playlist::select(['id'])->where('name', 'plan_' . $plan->id)->where('user_id', $user->id)->get()->pluck('id');
+        $plan_days_data = $new_playlists->map(function ($item) use ($plan) {
+            return [
+                'plan_id'               => $plan->id,
+                'playlist_id'           => $item,
+            ];
+        })->toArray();
+        Playlist::whereIn('id', $new_playlists)->update(['name' => '', 'updated_at' => 'updated_at']);
+        PlanDay::insert($plan_days_data);
 
         UserPlan::create([
             'user_id'               => $user->id,
@@ -510,16 +513,23 @@ class PlansController extends APIController
 
         $created_plan_days = [];
 
+        $data = [];
         for ($i = 0; $i < intval($days); $i++) {
-            $playlist = Playlist::create([
-                'user_id'               => $user->id,
-            ]);
-
-            $created_plan_days[] = PlanDay::create([
-                'plan_id'               => $plan->id,
-                'playlist_id'           => $playlist->id,
-            ]);
+            $data[] = ['name' => 'plan_' . $plan_id, 'user_id' => $user->id];
         }
+        Playlist::insert($data);
+        $new_playlists = Playlist::select(['id'])->where('name', 'plan_' . $plan_id)->where('user_id', $user->id)->get()->pluck('id');
+        $plan_days_data = $new_playlists->map(function ($item) use ($plan) {
+            return [
+                'plan_id'               => $plan->id,
+                'playlist_id'           => $item,
+            ];
+        })->toArray();
+        Playlist::whereIn('id', $new_playlists)->update(['name' => '', 'updated_at' => 'updated_at']);
+        PlanDay::insert($plan_days_data);
+
+
+        $created_plan_days = PlanDay::where('plan_id', $plan->id)->whereIn('playlist_id', $new_playlists)->get();
 
         return $this->reply($created_plan_days);
     }

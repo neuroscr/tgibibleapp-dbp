@@ -37,7 +37,7 @@ class DeleteTemporaryZipFiles extends Command
             $files = collect(File::files($public_dir));
 
             $paths = $files->filter(function ($file) {
-                return Carbon::createFromTimestamp(($file->getATime()))->lt(Carbon::now()->addHours(-1));
+                return Carbon::createFromTimestamp(($file->getATime()))->lt(Carbon::now()->addHours(-1)) && $file->getExtension() === 'zip';
             })->map(function ($file) {
                 return $file->getPathname();
             })->toArray();

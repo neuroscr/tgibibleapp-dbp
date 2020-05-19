@@ -77,7 +77,6 @@ class Kernel extends ConsoleKernel
 
         $schedule->command(DeleteTemporaryZipFiles::class)
             ->hourly()
-            ->onOneServer()
             ->withoutOverlapping();
     }
 

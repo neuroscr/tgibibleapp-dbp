@@ -124,7 +124,9 @@ class LanguagesController extends APIController
         $limit      = checkParam('limit');
         $page       = checkParam('page');
 
-        $access_control = $this->accessControl($this->key);
+        $access_control = cacheRemember('access_control', [$this->key], now()->addHour(), function () {
+            return $this->accessControl($this->key);
+        });
 
         $cache_params = [$this->v,  $country, $code, $GLOBALS['i18n_id'], $sort_by, $name, $show_restricted, $include_alt_names, $asset_id, $access_control->string, $limit, $page, $show_bibles, $random];
 
@@ -225,7 +227,9 @@ class LanguagesController extends APIController
      */
     public function show($id)
     {
-        $access_control = $this->accessControl($this->key);
+        $access_control = cacheRemember('access_control', [$this->key], now()->addHour(), function () {
+            return $this->accessControl($this->key);
+        });
         $cache_params = [$id, $access_control->string];
         $language = cacheRemember('language', $cache_params, now()->addDay(), function () use ($id, $access_control) {
             $language = Language::where('id', $id)->orWhere('iso', $id)

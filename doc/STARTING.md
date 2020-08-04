@@ -296,7 +296,7 @@ example above.
 `/bibles/{BIBLE_ID}/book?asset_id=dbp-vid&verify_content=true`
 
 This route returns a complete list of books for the bible but for brevity's
-sake only the first one is shown.
+sake only the first one is shown (for BIBLE_ID=EN1ESV).
 
 ```json
 {

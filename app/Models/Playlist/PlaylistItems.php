@@ -280,7 +280,7 @@ class PlaylistItems extends Model implements Sortable
         });
 
         $bible_files = cacheRemember(
-            'bible_file_duration',
+            'bible_file_verses',
             [$fileset->hash_id, $book_id, $chapter_start, $chapter_end],
             now()->addDay(),
             function () use ($fileset, $book_id, $chapter_start, $chapter_end) {

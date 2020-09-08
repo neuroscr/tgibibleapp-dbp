@@ -595,7 +595,7 @@ class PlaylistsController extends APIController
         return $this->reply($single_item ? $created_playlist_items[0] : $created_playlist_items);
     }
 
-    private function createPlaylistItems($playlist, $playlist_items, $set_translated_id = false)
+    private function createPlaylistItems($playlist, $playlist_items)
     {
         $created_playlist_items = [];
 
@@ -624,10 +624,49 @@ class PlaylistsController extends APIController
             if (!$verses) {
                 $created_playlist_item->calculateVerses()->save();
             }
-            if ($set_translated_id) {
-                $created_playlist_item->translated_id = $playlist_item->translated_id;
-            }
             $created_playlist_items[] = $created_playlist_item;
+        }
+
+        return $created_playlist_items;
+    }
+
+    private function createTranslatedPlaylistItems($playlist, $playlist_items)
+    {
+        $current_items_size = sizeof($playlist->items);
+        $new_items_size = sizeof($playlist_items);
+
+        if ($current_items_size + $new_items_size > $this->items_limit) {
+            $allowed_size = $this->items_limit - $current_items_size;
+            $playlist_items = array_slice($playlist_items, 0, $allowed_size);
+        }
+
+        $playlist_items_to_create = [];
+        foreach ($playlist_items as $playlist_item) {
+            $playlist_item = (object) $playlist_item;
+            $playlist_item_data = [
+                'playlist_id'       => $playlist->id,
+                'fileset_id'        => $playlist_item->fileset_id,
+                'book_id'           => $playlist_item->book_id,
+                'chapter_start'     => $playlist_item->chapter_start,
+                'chapter_end'       => $playlist_item->chapter_end,
+                'verse_start'       => $playlist_item->verse_start ?? null,
+                'verse_end'         => $playlist_item->verse_end ?? null,
+                'verses'            => $playlist_items->verses ?? 0
+            ];
+            $playlist_items_to_create[] = $playlist_item_data;
+        }
+
+        PlaylistItems::insert($playlist_items_to_create);
+        $new_items = PlaylistItems::where('playlist_id', $playlist->id)->get();
+        $created_playlist_items = [];
+        foreach ($new_items as $key => $playlist_item) {
+            $playlist_item->calculateDuration()->save();
+            if (!$playlist_item->verses) {
+                $playlist_item->calculateVerses()->save();
+            }
+            $playlist_item->translated_id = $playlist_items[$key]->translated_id;
+
+            $created_playlist_items[] = $playlist_item;
         }
 
         return $created_playlist_items;
@@ -808,7 +847,7 @@ class PlaylistsController extends APIController
 
 
         $playlist = Playlist::create($playlist_data);
-        $items = collect($this->createPlaylistItems($playlist, $translated_items, true));
+        $items = collect($this->createTranslatedPlaylistItems($playlist, $translated_items));
 
 
         foreach ($metadata_items as $item) {

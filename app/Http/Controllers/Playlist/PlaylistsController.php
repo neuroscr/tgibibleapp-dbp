@@ -610,7 +610,7 @@ class PlaylistsController extends APIController
         foreach ($playlist_items as $playlist_item) {
             $verses = $playlist_items->verses ?? 0;
             $playlist_item = (object) $playlist_item;
-            $created_playlist_item = [
+            $created_playlist_item = PlaylistItems::create([
                 'playlist_id'       => $playlist->id,
                 'fileset_id'        => $playlist_item->fileset_id,
                 'book_id'           => $playlist_item->book_id,
@@ -619,19 +619,15 @@ class PlaylistsController extends APIController
                 'verse_start'       => $playlist_item->verse_start ?? null,
                 'verse_end'         => $playlist_item->verse_end ?? null,
                 'verses'            => $verses
-            ];
-
+            ]);
+            $created_playlist_item->calculateDuration()->save();
+            if (!$verses) {
+                $created_playlist_item->calculateVerses()->save();
+            }
             if ($set_translated_id) {
-                $created_playlist_item['translated_id'] = $playlist_item->translated_id;
+                $created_playlist_item->translated_id = $playlist_item->translated_id;
             }
             $created_playlist_items[] = $created_playlist_item;
-        }
-
-        $created_playlist_items = PlaylistItems::create($created_playlist_items);
-
-        $created_playlist_items->calculateDuration()->save();
-        if (!$created_playlist_items->has_verses) {
-            $created_playlist_items->calculateVerses()->save();
         }
 
         return $created_playlist_items;
@@ -744,9 +740,9 @@ class PlaylistsController extends APIController
      *
      *
      */
-    public function translate(Request $request, $playlist_id)
+    public function translate(Request $request, $playlist_id, $user = false)
     {
-        $user = $request->user();
+        $user = $user ? $user : $request->user();
 
         // Validate Project / User Connection
         if (!empty($user) && !$this->compareProjects($user->id, $this->key)) {
@@ -762,7 +758,7 @@ class PlaylistsController extends APIController
             return $this->setStatusCode(404)->replyWithError('Bible Not Found');
         }
 
-        $playlist = $this->getPlaylist($user, $playlist_id);
+        $playlist = $this->getPlaylist(false, $playlist_id);
         if (!$playlist) {
             return $this->setStatusCode(404)->replyWithError('Playlist Not Found');
         }

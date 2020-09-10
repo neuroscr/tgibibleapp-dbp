@@ -16,6 +16,7 @@ use App\Http\Controllers\APIController;
 use App\Http\Controllers\User\BookmarksController;
 use App\Http\Controllers\User\HighlightsController;
 use App\Http\Controllers\User\NotesController;
+use App\Model\User\UserDownload;
 use App\Models\Bible\BibleDefault;
 use App\Models\Bible\BibleFile;
 use App\Models\Bible\BibleFileset;
@@ -675,6 +676,16 @@ class BiblesController extends APIController
         $chapter = checkParam('chapter', true);
 
         $zip = checkBoolean('zip');
+
+        if (!empty($user) && $zip) {
+            // Grabar en una nueva tabla
+            // Crear la tabla user_downloads
+            // #1 migracion creo la table (php artisan make:migration add_user_downloads_table)
+            // #crea un modelo para guardar
+            UserDownload::create([
+                'user_id'        => $user->id,
+            ]);
+        }
         $copyrights = checkBoolean('copyrights');
         $drama = checkParam('drama') ?? 'all';
         if ($drama !== 'all') {

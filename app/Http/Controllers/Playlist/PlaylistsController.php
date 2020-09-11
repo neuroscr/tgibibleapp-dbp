@@ -660,10 +660,6 @@ class PlaylistsController extends APIController
         $new_items = PlaylistItems::where('playlist_id', $playlist->id)->get();
         $created_playlist_items = [];
         foreach ($new_items as $key => $playlist_item) {
-            $playlist_item->calculateDuration()->save();
-            if (!$playlist_item->verses) {
-                $playlist_item->calculateVerses()->save();
-            }
             $playlist_item->translated_id = $playlist_items[$key]->translated_id;
 
             $created_playlist_items[] = $playlist_item;

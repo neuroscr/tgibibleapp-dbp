@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class translatePlan extends Command
 {
@@ -79,9 +80,17 @@ class translatePlan extends Command
                 try {
                     $this->line('Translating plan to bible ' . $bible_id . ' started ' . Carbon::now());
                     $new_plan = $plan_controller->translate($request, $plan_id, $user, false, false);
-                    $days = $new_plan['days'];
+                    $plan = Plan::where('id', $new_plan['id'])->first();
+                    $language_id = DB::connection('dbp')
+                        ->table('bibles')
+                        ->select(['language_id'])
+                        ->whereId($bible_id)->first();
+
+                    $plan->language_id = $language_id->language_id;
+                    $plan->save();
+
                     $this->line('Calculating duration and verses ' . Carbon::now());
-                    foreach ($days as $day) {
+                    foreach ($plan->days as $day) {
                         $playlist_items = PlaylistItems::where('playlist_id', $day['playlist_id'])->get();
                         foreach ($playlist_items as $playlist_item) {
                             $playlist_item->calculateDuration()->save();

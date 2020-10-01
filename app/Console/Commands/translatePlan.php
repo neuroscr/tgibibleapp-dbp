@@ -72,7 +72,7 @@ class translatePlan extends Command
         } else {
             $bible_ids = explode(',', $bible_ids);
             $user = User::with('projects')->whereId($plan->user_id)->first();
-            $plan_controller = new PlansController();
+            $plan_controller = new MessagedPlansController();
             foreach ($bible_ids as $key => $bible_id) {
                 $request = new Request();
                 request()->merge(['bible_id' => $bible_id]);
@@ -108,5 +108,14 @@ class translatePlan extends Command
 
         $this->line('');
         $this->alert('Translating plan end: ' . Carbon::now());
+    }
+}
+
+
+class MessagedPlansController extends PlansController
+{
+    public function replyWithError($message, $action = null)
+    {
+        throw (new Exception($message));
     }
 }

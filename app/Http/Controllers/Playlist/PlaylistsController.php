@@ -19,6 +19,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use GuzzleHttp\Client;
 
 class PlaylistsController extends APIController
 {
@@ -1194,31 +1195,61 @@ class PlaylistsController extends APIController
     {
         $filesets = Arr::pluck(DB::connection('dbp_users')
             ->select('select DISTINCT(fileset_id) from playlist_items where playlist_id = ?', [$playlist_id]), 'fileset_id');
+        $fileset_text_info = array();
 
-        $filesets_hashes = DB::connection('dbp')
-            ->table('bible_filesets')
-            ->select(['hash_id', 'id'])
-            ->whereIn('id', $filesets)->get();
+        $config = config('services.content');
 
-        $hashes_bibles = DB::connection('dbp')
-            ->table('bible_fileset_connections')
-            ->select(['hash_id', 'bible_id'])
-            ->whereIn('hash_id', $filesets_hashes->pluck('hash_id'))->get();
+        // if configured to use content server
+        if (!empty($config['ur'])) {
+          $client = new Client();
+          $res = $client->get($config['url'] . 'bibles/filesets/'.
+            join(',',$filesets).'/playlist?v=4&key=' . $config['key']);
+          $filesets_hashes = collect(json_decode($res->getBody() . ''));
 
-        $text_filesets = DB::connection('dbp')
-            ->table('bible_fileset_connections as fc')
-            ->join('bible_filesets as f', 'f.hash_id', '=', 'fc.hash_id')
-            ->select(['f.*', 'fc.bible_id'])
-            ->where('f.set_type_code', 'text_plain')
-            ->whereIn('fc.bible_id', $hashes_bibles->pluck('bible_id'))->get()->groupBy('bible_id');
+          $fileset_text_info = array();
+          foreach ($filesets as $fileset) {
+              // f data
+              $fileset_text_info[$fileset] = $filesets_hashes[$fileset];
+          }
+        } else {
+          // else use local data
 
+          // lookup filesets and get hashes
+          // map id to hash_id
+          $filesets_hashes = DB::connection('dbp')
+              ->table('bible_filesets')
+              ->select(['hash_id', 'id'])
+              ->whereIn('id', $filesets)->get();
 
-        $fileset_text_info = $filesets_hashes->pluck('hash_id', 'id');
-        $bible_hash = $hashes_bibles->pluck('bible_id', 'hash_id');
+          // convert fileset hashes into bible_ids
+          // map hash_id to bible_id
+          $hashes_bibles = DB::connection('dbp')
+              ->table('bible_fileset_connections')
+              ->select(['hash_id', 'bible_id'])
+              ->whereIn('hash_id', $filesets_hashes->pluck('hash_id'))->get();
 
-        foreach ($filesets as $fileset) {
-            $bible_id = $bible_hash[$fileset_text_info[$fileset]];
-            $fileset_text_info[$fileset] = $text_filesets[$bible_id];
+          // convert bible_ids into text filesets + bible_ids
+          // map bible_id to f data
+          $text_filesets = DB::connection('dbp')
+              ->table('bible_fileset_connections as fc')
+              ->join('bible_filesets as f', 'f.hash_id', '=', 'fc.hash_id')
+              ->select(['f.*', 'fc.bible_id'])
+              ->where('f.set_type_code', 'text_plain')
+              ->whereIn('fc.bible_id', $hashes_bibles->pluck('bible_id'))->get()->groupBy('bible_id');
+
+          // create fileset lookup to hash
+          $fileset_text_info = $filesets_hashes->pluck('hash_id', 'id');
+          // create hash lookup to id
+          $bible_hash = $hashes_bibles->pluck('bible_id', 'hash_id');
+
+          // build fileset_text_info from fileset
+          foreach ($filesets as $fileset) {
+              // need text
+              // get bible_id for this fileset
+              $bible_id = $bible_hash[$fileset_text_info[$fileset]];
+              // fetch text for bible_id
+              $fileset_text_info[$fileset] = $text_filesets[$bible_id];
+          }
         }
         return $fileset_text_info;
     }

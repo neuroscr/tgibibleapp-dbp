@@ -27,7 +27,9 @@ class SwaggerDocsController extends Controller
 
     public function swaggerDocsGen($version)
     {
-        define('API_URL_DOCS', config('app.api_url'));
+        if (!defined('API_URL_DOCS')) {
+            define('API_URL_DOCS', config('app.api_url'));
+        }
         $swagger = cacheRemember('OAS', [$version], now()->addDay(), function () use ($version) {
             $swagger = \OpenApi\scan(app_path());
             $swagger->tags  = $this->swaggerVersionTags($swagger->tags, $version);

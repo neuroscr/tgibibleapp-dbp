@@ -156,7 +156,8 @@ class BiblesRoutesTest extends ApiV4Test
      */
     public function bibleFilesetsShowMultiple()
     {
-        $access_control = $this->accessControl($this->key);
+        // keeping this, because we'll utilitze when we can unhard-code
+        //$access_control = $this->accessControl($this->key);
         //$file = BibleFile::with('fileset')->whereIn('hash_id', $access_control->hashes)->inRandomOrder()->first();
 
         // just hard code for now

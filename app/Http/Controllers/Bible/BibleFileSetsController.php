@@ -14,6 +14,8 @@ use App\Models\Bible\BibleFilesetType;
 use App\Models\Bible\Book;
 use App\Models\Language\Language;
 
+use Illuminate\Support\Facades\DB;
+
 use App\Transformers\FileSetTransformer;
 use Illuminate\Http\Request;
 
@@ -140,6 +142,49 @@ class BibleFileSetsController extends APIController
         $text_fileset_copy->hash_id = $hash_id;
         // return text_plain for this bible including hash_id
         return $this->reply($text_fileset_copy, [], '');
+    }
+  
+    public function getPlaylistMeta($id = null, $asset_id = null, $set_type_code = null, $cache_key = 'bible_filesets_show2')
+    {
+        // laravel pass array from route to controller
+        // https://stackoverflow.com/a/47695952/287696
+        $filesets = explode(',', checkParam('fileset_id', true, $id));
+
+        // lookup filesets and get hashes
+        $filesets_hashes = DB::connection('dbp')
+            ->table('bible_filesets')
+            ->select(['hash_id', 'id'])
+            ->whereIn('id', $filesets)->get();
+
+        // convert fileset hashes into bible_ids
+        $hashes_bibles = DB::connection('dbp')
+            ->table('bible_fileset_connections')
+            ->select(['hash_id', 'bible_id'])
+            ->whereIn('hash_id', $filesets_hashes->pluck('hash_id'))->get();
+
+        // convert bible_ids into text filesets + bible_ids
+        $text_filesets = DB::connection('dbp')
+            ->table('bible_fileset_connections as fc')
+            ->join('bible_filesets as f', 'f.hash_id', '=', 'fc.hash_id')
+            // I think we may only need: id, hash_id, set_type_code
+            ->select(['f.*', 'fc.bible_id'])
+            ->where('f.set_type_code', 'text_plain')
+            ->whereIn('fc.bible_id', $hashes_bibles->pluck('bible_id'))->get()->groupBy('bible_id');
+
+        // create fileset lookup to hash
+        $fileset_text_info = $filesets_hashes->pluck('hash_id', 'id');
+        // create hash lookup to id
+        $bible_hash = $hashes_bibles->pluck('bible_id', 'hash_id');
+
+        // build fileset_text_info from fileset
+        foreach ($filesets as $fileset) {
+            // need text
+            // get bible_id for this fileset
+            $bible_id = $bible_hash[$fileset_text_info[$fileset]];
+            // fetch text for bible_id
+            $fileset_text_info[$fileset] = $text_filesets[$bible_id];
+        }
+        return $this->reply($fileset_text_info, [], '');
     }
 
     private function signedPath($bible, $fileset, $fileset_chapter)

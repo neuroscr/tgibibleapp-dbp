@@ -28,7 +28,7 @@ class CollectionsController extends APIController
      *     @OA\Parameter(
      *          name="featured",
      *          in="query",
-     *          @OA\Schema(ref="#/components/schemas/Plan/properties/featured"),
+     *          @OA\Schema(ref="#/components/schemas/Collection/properties/featured"),
      *          description="Return featured collections"
      *     ),
      *     security={{"api_token":{}}},
@@ -151,9 +151,7 @@ class CollectionsController extends APIController
      *     @OA\RequestBody(required=true, description="Fields for User Collection Creation",
      *           @OA\MediaType(mediaType="application/json",
      *              @OA\Schema(
-     *                  @OA\Property(property="name", ref="#/components/schemas/Plan/properties/name"),
-     *                  @OA\Property(property="suggested_start_date", ref="#/components/schemas/Plan/properties/suggested_start_date"),
-     *                  @OA\Property(property="days",type="integer")
+     *                  @OA\Property(property="name", ref="#/components/schemas/Collection/properties/name"),
      *              )
      *          )
      *     ),
@@ -176,13 +174,13 @@ class CollectionsController extends APIController
         $name = checkParam('name', true);
         $days = intval(checkParam('days', true));
         $days = $days > $this->days_limit ? $this->days_limit : $days;
-        $suggested_start_date = checkParam('suggested_start_date');
+        //$suggested_start_date = checkParam('suggested_start_date');
 
         $collection = Collection::create([
             'user_id'               => $user->id,
             'name'                  => $name,
             'featured'              => false,
-            'suggested_start_date'  => $suggested_start_date ?? ''
+            //'suggested_start_date'  => $suggested_start_date ?? ''
         ]);
 
         // build playlist data
@@ -312,7 +310,7 @@ class CollectionsController extends APIController
         }
 
         $playlists = $collection->playlists();
-        echo "count [", $playlists->count(), "]<br>\n";
+        echo "getPlaylists count [", $playlists->count(), "]<br>\n";
         foreach($playlists as $item) {
            echo "item[", $item->id, "]<br>\n";
         }
@@ -351,13 +349,10 @@ class CollectionsController extends APIController
      *     summary="Update a collection",
      *     operationId="v4_collections.update",
      *     security={{"api_token":{}}},
-     *     @OA\Parameter(name="collection_id", in="path", required=true, @OA\Schema(ref="#/components/schemas/Plan/properties/id")),
-     *     @OA\Parameter(name="days", in="query",@OA\Schema(type="string"), description="Comma-separated ids of the days to be sorted or deleted"),
-     *     @OA\Parameter(name="delete_days", in="query",@OA\Schema(type="boolean"), description="Will delete all days"),
+     *     @OA\Parameter(name="collection_id", in="path", required=true, @OA\Schema(ref="#/components/schemas/Collection/properties/id")),
      *     @OA\RequestBody(required=true, @OA\MediaType(mediaType="application/json",
      *          @OA\Schema(
-     *              @OA\Property(property="name", ref="#/components/schemas/Plan/properties/name"),
-     *              @OA\Property(property="suggested_start_date", ref="#/components/schemas/Plan/properties/suggested_start_date")
+     *              @OA\Property(property="name", ref="#/components/schemas/Collection/properties/name"),
      *          )
      *     )),
      *     @OA\Response(response=200, ref="#/components/responses/collection")
@@ -431,7 +426,7 @@ class CollectionsController extends APIController
      *     summary="Delete a collection",
      *     operationId="v4_collections.destroy",
      *     security={{"api_token":{}}},
-     *     @OA\Parameter(name="collection_id", in="path", required=true, @OA\Schema(ref="#/components/schemas/Plan/properties/id")),
+     *     @OA\Parameter(name="collection_id", in="path", required=true, @OA\Schema(ref="#/components/schemas/Collection/properties/id")),
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
@@ -491,15 +486,11 @@ class CollectionsController extends APIController
      *  @OA\Schema (
      *   type="object",
      *   schema="v4_collection",
-     *   @OA\Property(property="id", ref="#/components/schemas/Plan/properties/id"),
-     *   @OA\Property(property="name", ref="#/components/schemas/Plan/properties/name"),
-     *   @OA\Property(property="featured", ref="#/components/schemas/Plan/properties/featured"),
-     *   @OA\Property(property="thumbnail", ref="#/components/schemas/Plan/properties/thumbnail"),
-     *   @OA\Property(property="suggested_start_date", ref="#/components/schemas/Plan/properties/suggested_start_date"),
-     *   @OA\Property(property="created_at", ref="#/components/schemas/Plan/properties/created_at"),
-     *   @OA\Property(property="updated_at", ref="#/components/schemas/Plan/properties/updated_at"),
-     *   @OA\Property(property="start_date", ref="#/components/schemas/UserPlan/properties/start_date"),
-     *   @OA\Property(property="percentage_completed", ref="#/components/schemas/UserPlan/properties/percentage_completed"),
+     *   @OA\Property(property="id", ref="#/components/schemas/Collection/properties/id"),
+     *   @OA\Property(property="name", ref="#/components/schemas/Collection/properties/name"),
+     *   @OA\Property(property="featured", ref="#/components/schemas/Collection/properties/featured"),
+     *   @OA\Property(property="created_at", ref="#/components/schemas/Collection/properties/created_at"),
+     *   @OA\Property(property="updated_at", ref="#/components/schemas/Collection/properties/updated_at"),
      *   @OA\Property(property="user", ref="#/components/schemas/v4_collection_index_user"),
      * )
      *
@@ -516,8 +507,7 @@ class CollectionsController extends APIController
      *   schema="v4_collection_detail",
      *   allOf={
      *      @OA\Schema(ref="#/components/schemas/v4_collection"),
-     *   },
-     *   @OA\Property(property="days",type="array",@OA\Items(ref="#/components/schemas/PlanDay"))
+     *   }
      * )
      *
      *

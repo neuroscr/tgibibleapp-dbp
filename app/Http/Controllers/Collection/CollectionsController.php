@@ -296,6 +296,52 @@ class CollectionsController extends APIController
         return $this->reply($collection);
     }
 
+    public function getPlaylists(Request $request, $collection_id)
+    {
+        $user = $request->user();
+
+        // Validate Project / User Connection
+        if (!empty($user) && !$this->compareProjects($user->id, $this->key)) {
+            return $this->setStatusCode(401)->replyWithError(trans('api.projects_users_not_connected'));
+        }
+
+        $collection = $this->getCollection($collection_id, $user);
+
+        if (!$collection) {
+            return $this->setStatusCode(404)->replyWithError('Collection Not Found');
+        }
+
+        $playlists = $collection->playlists();
+        echo "count [", $playlists->count(), "]<br>\n";
+        foreach($playlists as $item) {
+           echo "item[", $item->id, "]<br>\n";
+        }
+
+        $show_details = checkBoolean('show_details');
+        $show_text = checkBoolean('show_text');
+        if ($show_text) {
+            $show_details = $show_text;
+        }
+
+        if ($show_details) {
+            $playlist_controller = new PlaylistsController();
+            // get those playlists
+            foreach($playlists as $colPlaylist) {
+                $playlist = $playlist_controller->getPlaylist($user, $item->playlist_id);
+                $playlist->path = route('v4_playlists.hls', ['playlist_id'  => $item->playlist_id, 'v' => $this->v, 'key' => $this->key]);
+                if ($show_text) {
+                    foreach ($playlist->items as $item) {
+                        $item->verse_text = $item->getVerseText();
+                    }
+                }
+                $colPlaylist->playlist = $playlist;
+            }
+            $collection->playlists = $playlists;
+        }
+
+        return $this->reply($collection);
+    }
+
     /**
      * Update the specified collection.
      *

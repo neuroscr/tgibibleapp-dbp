@@ -729,13 +729,13 @@ class BiblesController extends APIController
             }
 
             $drama_all = $drama === 'all';
-            
+
             if ($drama === 'drama' || $drama_all) {
                 $chapter_filesets = $this->getAudioFilesetData($chapter_filesets, $bible, $book, $chapter, 'audio_drama', 'drama', $zip, 'audio', 'non_drama', !$drama_all && $zip);
 
                 if (!empty($user) && $zip && isset($chapter_filesets->audio->drama)) {
                     $fileset_id = $chapter_filesets->audio->drama['fileset']['id'];
-                
+
                     cacheRemember('v4_user_download', [$user->id, $fileset_id], now()->addDay(), function () use ($user, $fileset_id) {
                         UserDownload::create([
                     'user_id'        => $user->id,
@@ -745,7 +745,7 @@ class BiblesController extends APIController
                     });
                 }
             }
-            
+
             if ($drama === 'non-drama' || $drama_all) {
                 $chapter_filesets = $this->getAudioFilesetData($chapter_filesets, $bible, $book, $chapter, 'audio', 'non_drama', $zip, 'audio_drama', 'drama', !$drama_all && $zip);
 
@@ -854,6 +854,20 @@ class BiblesController extends APIController
         }
 
         return false;
+    }
+
+    public function getAudio($bible_id)
+    {
+        $bible = cacheRemember('bible_translate', [$bible_id], now()->addDay(), function () use ($bible_id) {
+            return Bible::whereId($bible_id)->first();
+        });
+        $audio_fileset_types = collect(['audio_stream', 'audio_drama_stream', 'audio', 'audio_drama']);
+        $bible_audio_filesets = $bible->filesets->whereIn('set_type_code', $audio_fileset_types);
+
+        return $this->reply([
+            'language'=>$bible->language->name,
+            'audio'=>$bible_audio_filesets,
+        ]);
     }
 
     private function getAudioFilesetData($results, $bible, $book, $chapter, $type, $name, $download = false, $secondary_type, $secondary_name, $get_secondary = false)

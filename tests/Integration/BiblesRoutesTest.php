@@ -178,6 +178,44 @@ class BiblesRoutesTest extends ApiV4Test
         $this->assertEquals($result['BMQBSM'][0]->id, 'BMQBSM');
     }
 
+    /**
+     * @category V4_API
+     * @category Route Name: v4_bible.getAudio
+     * @category Route Path: https://api.dbp.test/bibles/ENGESV/audio?v=4&key={key}&type=text_plain&bucket=dbp-prod
+     * @see      \App\Http\Controllers\Bible\BibleFileSetsController::getAudio
+     * @group    BibleRoutes
+     * @group    V4
+     * @group    non-travis
+     * @test
+     */
+    public function bibleGetAudio()
+    {
+        // keeping this, because we'll utilitze when we can unhard-code
+        //$access_control = $this->accessControl($this->key);
+        //$file = BibleFile::with('fileset')->whereIn('hash_id', $access_control->hashes)->inRandomOrder()->first();
+
+        // just hard code for now
+        $path = route('v4_bible.getAudio', array_merge([
+            'bible_id' => 'BMQBSM',
+            //'book_id'    => $file->book_id,
+            //'chapter'    => $file->chapter_start,
+            //'type'       => $file->fileset->set_type_code,
+            //'bucket'     => $file->fileset->asset_id
+        ], $this->params));
+
+        echo "\nTesting: $path";
+        $response = $this->withHeaders($this->params)->get($path);
+        $response->assertSuccessful();
+        $result = json_decode($response->getContent(), true);
+        // should have 2 keys: language and audio
+        $this->assertEquals(count($result), 2);
+        // language check
+        $this->assertEquals($result['language'], 'Bomu');
+        // audio check
+        $this->assertEquals(collect($result['audio'])->count(), 4);
+    }
+
+
 
     /**
      * @category V4_API

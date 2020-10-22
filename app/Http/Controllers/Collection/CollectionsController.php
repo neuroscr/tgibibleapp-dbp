@@ -6,6 +6,7 @@ use App\Traits\AccessControlAPI;
 use App\Http\Controllers\APIController;
 use App\Models\Collection\Collection;
 use App\Models\Collection\CollectionPlaylist;
+use App\Http\Controllers\Playlist\PlaylistsController;
 use App\Models\Language\Language;
 use App\Traits\CheckProjectMembership;
 use Illuminate\Http\Request;
@@ -163,7 +164,7 @@ class CollectionsController extends APIController
      */
     public function store(Request $request)
     {
-
+        // API Controller failure
         // Validate Project / User Connection
         $user = $request->user();
         $user_is_member = $this->compareProjects($user->id, $this->key);
@@ -488,17 +489,18 @@ class CollectionsController extends APIController
     {
         $select = ['collections.*'];
         if (!empty($user)) {
-            $select[] = 'user_plans.start_date';
-            $select[] = 'user_plans.percentage_completed';
+            //$select[] = 'user_plans.start_date';
+            //$select[] = 'user_plans.percentage_completed';
         }
-        $plan = Collection::with('days')
-            ->with('user')
-            ->where('collections.id', $plan_id)
+        $plan = Collection::with('user')
+            ->where('collections.id', $collection_id)
+            /*
             ->when(!empty($user), function ($q) use ($user) {
                 $q->leftJoin('user_plans', function ($join) use ($user) {
                     $join->on('user_plans.plan_id', '=', 'plans.id')->where('user_plans.user_id', $user->id);
                 });
-            })->select($select)->first();
+            }) */
+            ->select($select)->first();
 
         return $plan;
     }

@@ -31,6 +31,7 @@ class AddPlaylistCategoriesTable extends Migration
             Schema::connection('dbp_users')->create(
               'collection_playlists', function (Blueprint $table) {
                 $table->increments('id');
+                $table->integer('collection_id')->unsigned();
                 $table->integer('playlist_id')->unsigned();
                 $table->integer('order_column')->unsigned();
                 $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));

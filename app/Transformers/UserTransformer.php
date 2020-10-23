@@ -61,7 +61,10 @@ class UserTransformer extends BaseTransformer
                     'accounts'  => $user->accounts,
                     'keys'      => $user->keys,
                     'api_token' => $user->api_token,
-                    'freshchat_restore_id' => $user ->freshchat_restore_id
+                    'freshchat_restore_id' => $user ->freshchat_restore_id,
+                    'decision_name' => $user->decision_name,
+                    'decision_date' => $user->decision_date,
+                    'decision_want_resources' => $user->decision_want_resources,
                 ];
 
             /**
@@ -80,6 +83,9 @@ class UserTransformer extends BaseTransformer
              *       @OA\Property(property="profile",  ref="#/components/schemas/Profile"),
              *       @OA\Property(property="organizations",  ref="#/components/schemas/Organization"),
              *       @OA\Property(property="accounts", type="object",description="The unique identifier for a user's connection to the api and the means of that connection",example={"facebook":"1903random6321","cookie": "43190crumbles1023"}),
+             *       @OA\Property(property="decision_name",     ref="#/components/schemas/User/properties/decision_name"),
+             *       @OA\Property(property="decision_date",     ref="#/components/schemas/User/properties/decision_date"),
+             *       @OA\Property(property="decision_want_resources",     ref="#/components/schemas/User/properties/decision_want_resources"),
              *    )
              * )
              */
@@ -94,7 +100,10 @@ class UserTransformer extends BaseTransformer
                     'profile'   => $user->profile,
                     'organizations' => $user->organizations,
                     'accounts'  => $user->accounts,
-                    'freshchat_restore_id' => $user ->freshchat_restore_id
+                    'freshchat_restore_id' => $user ->freshchat_restore_id,
+                    'decision_name' => $user->decision_name,
+                    'decision_date' => $user->decision_date,
+                    'decision_want_resources' => $user->decision_want_resources
                 ];
         }
     }

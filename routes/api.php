@@ -238,3 +238,10 @@ Route::name('v4_collections.update')
     ->middleware('APIToken:check')->put('collections/{collection_id}',                          'Collection\CollectionsController@update');
 Route::name('v4_collections.destroy')
     ->middleware('APIToken:check')->delete('collections/{collection_id}',                       'Collection\CollectionsController@destroy');
+
+Route::name('v4_collection_playlists.store')
+    ->middleware('APIToken:check')->post('collections/{collection_id}/playlists',               'Collection\CollectionsController@storePlaylist');
+Route::name('v4_collection_playlists.update')
+    ->middleware('APIToken:check')->post('collections/{collection_id}/playlists/{playlist_id}',             'Collection\CollectionsController@updatePlaylist');
+Route::name('v4_collection_playlists.destroy')
+    ->middleware('APIToken:check')->delete('collections/{collection_id}/playlists/{playlist_id}',             'Collection\CollectionsController@destroyPlaylist');

@@ -29,14 +29,14 @@ class Collection extends Model
 {
     protected $connection = 'dbp_users';
     public $table         = 'collections';
-    //
+    protected $fillable   = ['user_id', 'name', 'language_id', 'order_column'];
 
     /**
      *
      * @OA\Property(
      *   title="id",
      *   type="integer",
-     *   description="The plan id",
+     *   description="The collection id",
      *   minimum=0
      * )
      *
@@ -47,7 +47,7 @@ class Collection extends Model
      * @OA\Property(
      *   title="name",
      *   type="string",
-     *   description="The name of the plan"
+     *   description="The name of the collection"
      * )
      *
      */
@@ -57,7 +57,7 @@ class Collection extends Model
      * @OA\Property(
      *   title="featured",
      *   type="boolean",
-     *   description="If the plan is featured"
+     *   description="If the collection is featured"
      * )
      *
      */
@@ -67,7 +67,7 @@ class Collection extends Model
      * @OA\Property(
      *   title="user_id",
      *   type="string",
-     *   description="The user that created the plan"
+     *   description="The user that created the collection"
      * )
      *
      */
@@ -75,9 +75,29 @@ class Collection extends Model
     /**
      *
      * @OA\Property(
+     *   title="language_id",
+     *   type="string",
+     *   description="The lanauge of the collection"
+     * )
+     *
+     */
+    protected $language_id;
+    /**
+     *
+     * @OA\Property(
+     *   title="order_column",
+     *   type="string",
+     *   description="The order of this collection in user's collections"
+     * )
+     *
+     */
+    protected $order_column;
+    /**
+     *
+     * @OA\Property(
      *   title="created_at",
      *   type="string",
-     *   description="The timestamp the plan was created at"
+     *   description="The timestamp the collection was created at"
      * )
      *
      * @method static Note whereCreatedAt($value)
@@ -87,7 +107,7 @@ class Collection extends Model
     /** @OA\Property(
      *   title="updated_at",
      *   type="string",
-     *   description="The timestamp the plan was last updated at",
+     *   description="The timestamp the collection was last updated at",
      *   nullable=true
      * )
      *
@@ -96,6 +116,11 @@ class Collection extends Model
      */
     protected $updated_at;
 
+    public function getFeaturedAttribute($featured)
+    {
+        return (bool) $featured;
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class)->select('id', 'name');
@@ -103,6 +128,6 @@ class Collection extends Model
 
     public function playlists()
     {
-        return $this->belongsTo(CollectionPlaylist::class)->select('id', 'name');
+        return $this->hasMany(CollectionPlaylist::class)->orderBy('order_column');
     }
 }

@@ -38,6 +38,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $email
  * @property boolean $verified
  * @property string $email_token
+ * @property string $decision_name
+ * @property integer $decision_date
+ * @property boolean $decision_want_resources
  *
  * @OA\Schema (
  *     type="object",
@@ -55,7 +58,7 @@ class User extends Authenticatable
 
     protected $connection = 'dbp_users';
     protected $table     = 'users';
-    protected $fillable  = ['id','v2_id','name', 'first_name', 'last_name', 'created_at', 'updated_at', 'last_login', 'email', 'password', 'activated', 'token', 'notes', 'signup_ip_address', 'signup_confirmation_ip_address', 'signup_sm_ip_address', 'admin_ip_address', 'updated_ip_address', 'deleted_ip_address', 'freshchat_restore_id'];
+    protected $fillable  = ['id','v2_id','name', 'first_name', 'last_name', 'created_at', 'updated_at', 'last_login', 'email', 'password', 'activated', 'token', 'notes', 'signup_ip_address', 'signup_confirmation_ip_address', 'signup_sm_ip_address', 'admin_ip_address', 'updated_ip_address', 'deleted_ip_address', 'freshchat_restore_id', 'decision_name', 'decision_date', 'decision_want_resources'];
     protected $hidden    = ['password', 'remember_token', 'activated', 'token'];
     protected $dates     = ['deleted_at'];
 
@@ -168,6 +171,39 @@ class User extends Authenticatable
      */
     protected $email_token;
 
+    /**
+     *
+     * @OA\Property(
+     *   title="decision_name",
+     *   type="string",
+     *   description="Who name a decision",
+     *   example="John Smith"
+     * )
+     *
+     */
+    protected $decision_name;
+    /**
+     *
+     * @OA\Property(
+     *   title="decision_date",
+     *   type="integer",
+     *   description="Date when they made a decision",
+     *   example="991231"
+     * )
+     *
+     */
+    protected $decision_date;
+    /**
+     *
+     * @OA\Property(
+     *   title="decision_want_resources",
+     *   type="boolean",
+     *   description="If they want more resources when they decide",
+     *   example="B95p56KqHrz8D3w"
+     * )
+     *
+     */
+    protected $decision_want_resources;
 
     protected $updated_at;
     protected $created_at;

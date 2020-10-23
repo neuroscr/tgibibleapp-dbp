@@ -297,6 +297,9 @@ class UsersController extends APIController
      *              @OA\Property(property="subscribed",              ref="#/components/schemas/ProjectMember/properties/subscribed"),
      *              @OA\Property(property="social_provider_id",      ref="#/components/schemas/Account/properties/provider_id"),
      *              @OA\Property(property="social_provider_user_id", ref="#/components/schemas/Account/properties/provider_user_id"),
+     *              @OA\Property(property="decision_name",              ref="#/components/schemas/User/properties/decision_name"),
+     *              @OA\Property(property="decision_date",              ref="#/components/schemas/User/properties/decision_date"),
+     *              @OA\Property(property="decision_want_resources",              ref="#/components/schemas/User/properties/decision_want_resources"),
      *          )
      *     )),
      *     @OA\Response(
@@ -328,6 +331,9 @@ class UsersController extends APIController
             'token'         => unique_random('dbp_users.users', 'token'),
             'activated'     => 0,
             'notes'         => $request->notes,
+            'decision_name' => $request->decision_name,
+            'decision_date' => $request->decision_date,
+            'decision_want_resources' => $request->decision_want_resources,
             'password'      => \Hash::make($request->password),
         ]);
 
@@ -403,6 +409,9 @@ class UsersController extends APIController
      *              @OA\Property(property="subscribed",              ref="#/components/schemas/ProjectMember/properties/subscribed"),
      *              @OA\Property(property="social_provider_id",      ref="#/components/schemas/Account/properties/provider_id"),
      *              @OA\Property(property="social_provider_user_id", ref="#/components/schemas/Account/properties/provider_user_id"),
+     *              @OA\Property(property="decision_name",              ref="#/components/schemas/User/properties/decision_name"),
+     *              @OA\Property(property="decision_date",              ref="#/components/schemas/User/properties/decision_date"),
+     *              @OA\Property(property="decision_want_resources",              ref="#/components/schemas/User/properties/decision_want_resources"),
      *          )
      *     )),
      *     @OA\Response(

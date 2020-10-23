@@ -244,7 +244,6 @@ class BiblesRoutesTest extends ApiV4Test
 
 
 
->>>>>>> 7a5f3efdd4f8457b1a14c8a6b0c8b6a370b616fa
     /**
      * @category V4_API
      * @category Route Name: v4_bible.links

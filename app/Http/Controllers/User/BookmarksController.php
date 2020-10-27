@@ -7,7 +7,6 @@ use App\Models\Bible\Book;
 use App\Models\User\Study\Bookmark;
 use App\Traits\CheckProjectMembership;
 use App\Transformers\UserBookmarksTransformer;
-use App\Transformers\V2\Annotations\BookmarkTransformer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use League\Fractal\Pagination\IlluminatePaginatorAdapter;
@@ -199,7 +198,7 @@ class BookmarksController extends APIController
 
         $this->handleTags($bookmark);
 
-        return $this->reply(fractal($bookmark, BookmarkTransformer::class)->addMeta(['success' => 'Bookmark Created successfully']));
+        return $this->reply(fractal($bookmark, UserBookmarksTransformer::class)->addMeta(['success' => 'Bookmark Created successfully']));
     }
 
     /**
@@ -260,7 +259,7 @@ class BookmarksController extends APIController
 
         $this->handleTags($bookmark);
 
-        return $this->reply(fractal($bookmark, new BookmarkTransformer())->addMeta(['success' => 'Bookmark Successfully updated']));
+        return $this->reply(fractal($bookmark, UserBookmarksTransformer::class)->addMeta(['success' => 'Bookmark Successfully updated']));
     }
 
     /**
@@ -319,13 +318,14 @@ class BookmarksController extends APIController
         $content_config = config('services.content');
         $errors = array();
         if (empty($content_config['url'])) {
-            $checks['bible_id'] = (($request->method === 'POST') ? 'required|' : '') . 'exists:dbp.bibles,id';
-            $checks['book_id']  = (($request->method === 'POST') ? 'required|' : '') . 'exists:dbp.books,id';
+            $checks['bible_id'] = ((request()->method === 'POST') ? 'required|' : '') . 'exists:dbp.bibles,id';
+            $checks['book_id']  = ((request()->method === 'POST') ? 'required|' : '') . 'exists:dbp.books,id';
         } else {
-            $checks['bible_id'] = (($request->method === 'POST') ? 'required|' : '');
-            $checks['book_id']  = (($request->method === 'POST') ? 'required|' : '');
-            if ($request->method === 'POST') {
+            $checks['bible_id'] = ((request()->method === 'POST') ? 'required|' : '');
+            $checks['book_id']  = ((request()->method === 'POST') ? 'required|' : '');
+            if (request()->method === 'POST') {
                 // FIXME
+                print_r(request()->all());
             }
         }
         $validator = Validator::make(request()->all(), $checks);

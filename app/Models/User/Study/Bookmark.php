@@ -9,6 +9,8 @@ use App\Models\Bible\BibleVerse;
 use App\Models\Bible\Book;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use App\Relations\EmptyRelation;
+use GuzzleHttp\Client;
 
 /**
  * App\Models\User\Study
@@ -131,6 +133,8 @@ class Bookmark extends Model
                 'bible_id',
                 $this['bible_id']
             );
+        } else {
+           return new EmptyRelation();
         }
     }
 
@@ -139,6 +143,8 @@ class Bookmark extends Model
         $content_config = config('services.content');
         if (empty($content_config['url'])) {
             return $this->belongsTo(Bible::class);
+        } else {
+           return new EmptyRelation();
         }
     }
 

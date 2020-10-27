@@ -4,6 +4,7 @@ namespace App\Transformers;
 
 use App\Models\User\Study\Bookmark;
 use League\Fractal\TransformerAbstract;
+use GuzzleHttp\Client;
 
 class UserBookmarksTransformer extends TransformerAbstract
 {
@@ -38,17 +39,41 @@ class UserBookmarksTransformer extends TransformerAbstract
      */
     public function transform(Bookmark $bookmark)
     {
+        // no book relationship?
+        if (!isset($bookmark->book->name)) {
+            // likely remote content set up
+            $book_name = '';
+            $content_config = config('services.content');
+            if (!empty($content_config['url'])) {
+                // we can pull book name from content server
+                $book_name = cacheRemember('book_name_data',
+                  [$bookmark->bible_id, $bookmark->book_id], now()->addDay(),
+                  function () use ($bookmark, $content_config) {
+                    $client = new Client();
+                    $res = $client->get($content_config['url'] . 'bibles/' .
+                       $bookmark->bible_id . '/book/' . $bookmark->book_id .
+                       '?v=4&key=' . $content_config['key']);
+                    $result = json_decode($res->getBody() . '', true);
+                    if ($result && $result['data'] && count($result['data'])) {
+                      return $result['data'][0]['name'];
+                    }
+                });
+            }
+        } else {
+             // can use relationship to get content locally
+             $book_name = optional($bookmark->book)->name;
+        }
         return [
-      'id' => (int) $bookmark->id,
-      'bible_id' => (string) $bookmark->bible_id,
-      'book_id' => (string) $bookmark->book_id,
-      'book_name' => (string) optional($bookmark->book)->name,
-      'chapter' => (int) $bookmark->chapter,
-      'verse' => (int) $bookmark->verse_start,
-      'verse_text' => (string) $bookmark->verse_text,
-      'created_at' => (string) $bookmark->created_at,
-      'updated_at' => (string) $bookmark->updated_at,
-      'tags' => $bookmark->tags
-    ];
+          'id' => (int) $bookmark->id,
+          'bible_id' => (string) $bookmark->bible_id,
+          'book_id' => (string) $bookmark->book_id,
+          'book_name' => (string) $book_name,
+          'chapter' => (int) $bookmark->chapter,
+          'verse' => (int) $bookmark->verse_start,
+          'verse_text' => (string) $bookmark->verse_text,
+          'created_at' => (string) $bookmark->created_at,
+          'updated_at' => (string) $bookmark->updated_at,
+          'tags' => $bookmark->tags
+        ];
     }
 }

@@ -125,15 +125,21 @@ class Bookmark extends Model
 
     public function book()
     {
-        return $this->hasOne(BibleBook::class, 'book_id', 'book_id')->where(
-      'bible_id',
-      $this['bible_id']
-    );
+        $content_config = config('services.content');
+        if (empty($content_config['url'])) {
+            return $this->hasOne(BibleBook::class, 'book_id', 'book_id')->where(
+                'bible_id',
+                $this['bible_id']
+            );
+        }
     }
 
     public function bible()
     {
-        return $this->belongsTo(Bible::class);
+        $content_config = config('services.content');
+        if (empty($content_config['url'])) {
+            return $this->belongsTo(Bible::class);
+        }
     }
 
     public function tags()
@@ -146,27 +152,47 @@ class Bookmark extends Model
         $bookmark = $this->toArray();
         $chapter = $bookmark['chapter'];
         $verse_start = $bookmark['verse_start'];
-        $bible = Bible::where('id', $bookmark['bible_id'])->first();
-        $fileset = BibleFileset::join(
-      'bible_fileset_connections as connection',
-      'connection.hash_id',
-      'bible_filesets.hash_id'
-    )
-      ->where('bible_filesets.set_type_code', 'text_plain')
-      ->where('connection.bible_id', $bible->id)
-      ->first();
-        if (!$fileset) {
-            return '';
+
+        $content_config = config('services.content');
+        if (empty($content_config['url'])) {
+            $bible = Bible::where('id', $bookmark['bible_id'])->first();
+            $fileset = BibleFileset::join(
+              'bible_fileset_connections as connection',
+              'connection.hash_id',
+              'bible_filesets.hash_id'
+            )
+                ->where('bible_filesets.set_type_code', 'text_plain')
+                ->where('connection.bible_id', $bible->id)
+                ->first();
+                  if (!$fileset) {
+                      return '';
+                  }
+                  $verses = BibleVerse::withVernacularMetaData($bible)
+                ->where('hash_id', $fileset->hash_id)
+                ->where('bible_verses.book_id', $bookmark['book_id'])
+                ->where('verse_start', $verse_start)
+                ->where('chapter', $chapter)
+                ->orderBy('verse_start')
+                ->select(['bible_verses.verse_text'])
+                ->get()
+                ->pluck('verse_text');
+            return implode(' ', $verses->toArray());
+        } else {
+            $bible_id = $bookmark['bible_id'];
+            $book_id = $bookmark['book_id'];
+            $chapter = $bookmark['chapter'];
+            $verse_start = $bookmark['verse_start'];
+
+            $verse_data = cacheRemember('book_verse_text_data', [
+              $bible_id, $book_id, $chapter, $verse_start], now()->addDay(), function () use ($bible_id, $book_id, $chapter, $verse_start, $content_config) {
+                $client = new Client();
+                $res = $client->get($content_config['url'] . 'bibles/' .
+                   $bible_id . '/book/' . $book_id . '/' .
+                   $chapter . '/' . $verse_start .
+                   '?v=4&key=' . $content_config['key']);
+                return $res->getBody() . '';
+            });
+            return $verse_data;
         }
-        $verses = BibleVerse::withVernacularMetaData($bible)
-      ->where('hash_id', $fileset->hash_id)
-      ->where('bible_verses.book_id', $bookmark['book_id'])
-      ->where('verse_start', $verse_start)
-      ->where('chapter', $chapter)
-      ->orderBy('verse_start')
-      ->select(['bible_verses.verse_text'])
-      ->get()
-      ->pluck('verse_text');
-        return implode(' ', $verses->toArray());
     }
 }

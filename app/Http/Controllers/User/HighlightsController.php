@@ -9,7 +9,6 @@ use App\Traits\AnnotationTags;
 use App\Transformers\UserHighlightsTransformer;
 use App\Models\User\Study\Highlight;
 use App\Traits\CheckProjectMembership;
-use App\Transformers\V2\Annotations\HighlightTransformer;
 use League\Fractal\Pagination\IlluminatePaginatorAdapter;
 use Illuminate\Support\Facades\DB;
 use Validator;
@@ -128,6 +127,17 @@ class HighlightsController extends APIController
             return $this->setStatusCode(401)->replyWithError(trans('api.projects_users_not_connected'));
         }
 
+        // now that most validation is done, lets do something that takes time
+
+        $content_config = config('services.content');
+        $book_bible_map = array();
+        if (!empty($content_config['url']) && $query) {
+            $client = new Client();
+            $res = $client->get($content_config['url'] . 'bibles/search/'.
+                $query.'?v=4&key=' . $content_config['key']);
+            $book_bible_map = json_decode($res->getBody() . '', true);
+        }
+
         $bible_id     = checkParam('bible_id');
         $book_id      = checkParam('book_id');
         $chapter_id   = checkParam('chapter|chapter_id');
@@ -151,7 +161,9 @@ class HighlightsController extends APIController
 
         if ($sort_by_book) {
             $book_order_query = cacheRemember('book_order_columns', [], now()->addDay(), function () {
-                $query = collect(Schema::connection('dbp')->getColumnListing('books'))->filter(function ($column) {
+                // FIXME:
+                // get the dbp.books order
+               $query = collect(Schema::connection('dbp')->getColumnListing('books'))->filter(function ($column) {
                     return strpos($column, '_order') !== false;
                 })->map(function ($column) {
                     $name = str_replace('_order', '', $column);
@@ -176,31 +188,43 @@ class HighlightsController extends APIController
                 $color = str_replace('#', '', $color);
                 $color = explode(',', $color);
                 $q->whereIn('user_highlight_colors.hex', $color);
-            })->when($query, function ($q) use ($query) {
-                $dbp_database = config('database.connections.dbp.database');
-                $q->join($dbp_database . '.bible_fileset_connections as connection', 'connection.bible_id', 'user_highlights.bible_id');
-                $q->join($dbp_database . '.bible_filesets as filesets', function ($join) {
-                    $join->on('filesets.hash_id', '=', 'connection.hash_id');
-                });
-                $q->where('filesets.set_type_code', 'text_plain');
-                $q->join($dbp_database . '.bible_verses as bible_verses', function ($join) use ($query) {
-                    $join->on('connection.hash_id', '=', 'bible_verses.hash_id')
-                        ->where('bible_verses.book_id', DB::raw('user_highlights.book_id'))
-                        ->where('bible_verses.chapter', DB::raw('user_highlights.chapter'))
-                        ->where('bible_verses.verse_start', '>=', DB::raw('user_highlights.verse_start'))
-                        ->where('bible_verses.verse_end', '<=', DB::raw('user_highlights.verse_end'));
-                });
+            })->when($query, function ($q) use ($query, $content_config, $book_bible_map) {
+                // FIXME:
+                if (empty($content_config['url'])) {
+                    $dbp_database = config('database.connections.dbp.database');
+                    // fileset joining...
+                    $q->join($dbp_database . '.bible_fileset_connections as connection', 'connection.bible_id', 'user_highlights.bible_id');
+                    $q->join($dbp_database . '.bible_filesets as filesets', function ($join) {
+                        $join->on('filesets.hash_id', '=', 'connection.hash_id');
+                    });
+                    $q->where('filesets.set_type_code', 'text_plain');
+                    $q->join($dbp_database . '.bible_verses as bible_verses', function ($join) use ($query) {
+                        $join->on('connection.hash_id', '=', 'bible_verses.hash_id')
+                            ->where('bible_verses.book_id', DB::raw('user_highlights.book_id'))
+                            ->where('bible_verses.chapter', DB::raw('user_highlights.chapter'))
+                            ->where('bible_verses.verse_start', '>=', DB::raw('user_highlights.verse_start'))
+                            ->where('bible_verses.verse_end', '<=', DB::raw('user_highlights.verse_end'));
+                    });
 
-                $q->join($dbp_database . '.bible_books as bible_books', function ($join) use ($query) {
-                    $join->on('user_highlights.bible_id', '=', 'bible_books.bible_id')
-                        ->on('user_highlights.book_id', '=', 'bible_books.book_id');
-                });
+                    // non-fileset stuff
 
-                $q->where(function ($q) use ($query) {
-                    $q->where('bible_verses.verse_text', 'like', '%' . $query . '%')
-                        ->orWhere('bible_books.name', 'like', '%' . $query . '%');
-                });
+                    $q->join($dbp_database . '.bible_books as bible_books', function ($join) use ($query) {
+                        $join->on('user_highlights.bible_id', '=', 'bible_books.bible_id')
+                            ->on('user_highlights.book_id', '=', 'bible_books.book_id');
+                    });
+
+                    $q->where(function ($q) use ($query) {
+                        $q->where('bible_verses.verse_text', 'like', '%' . $query . '%')
+                            ->orWhere('bible_books.name', 'like', '%' . $query . '%');
+                    });
+                } else {
+                    // Remote content
+                    // do the bible_id filter list
+                    $q->whereIn('user_highlights.bible_id', array_keys($book_bible_map));
+                }
             })->when($sort_by_book, function ($q) {
+                // FIXME:
+                // if sort_by_book, add books/bibles table joins...
                 $dbp_database = config('database.connections.dbp.database');
                 $q->join($dbp_database . '.books as books', function ($join) {
                     $join->on('user_highlights.book_id', '=', 'books.id');
@@ -286,7 +310,7 @@ class HighlightsController extends APIController
         ]);
 
         $this->handleTags($highlight);
-        return $this->reply(fractal($highlight, new HighlightTransformer())->addMeta(['success' => trans('api.users_highlights_create_200')]));
+        return $this->reply(fractal($highlight, UserHighlightsTransformer::class)->addMeta(['success' => trans('api.users_highlights_create_200')]));
     }
 
     /**
@@ -358,7 +382,7 @@ class HighlightsController extends APIController
 
         $this->handleTags($highlight);
 
-        return $this->reply(fractal($highlight, new HighlightTransformer())->addMeta(['success' => trans('api.users_highlights_update_200')]));
+        return $this->reply(fractal($highlight, UserHighlightsTransformer::class)->addMeta(['success' => trans('api.users_highlights_update_200')]));
     }
 
     /**
@@ -460,9 +484,10 @@ class HighlightsController extends APIController
     private function validateHighlight()
     {
         $validator = Validator::make(request()->all(), [
-            'bible_id'          => ((request()->method() === 'POST') ? 'required|' : '') . 'exists:dbp.bibles,id',
+            // FIXME:
+            //'bible_id'          => ((request()->method() === 'POST') ? 'required|' : '') . 'exists:dbp.bibles,id',
             'user_id'           => ((request()->method() === 'POST') ? 'required|' : '') . 'exists:dbp_users.users,id',
-            'book_id'           => ((request()->method() === 'POST') ? 'required|' : '') . 'exists:dbp.books,id',
+            //'book_id'           => ((request()->method() === 'POST') ? 'required|' : '') . 'exists:dbp.books,id',
             'chapter'           => ((request()->method() === 'POST') ? 'required|' : '') . 'max:150|min:1|integer',
             'verse_start'       => ((request()->method() === 'POST') ? 'required|' : '') . 'max:177|min:1|integer',
             'verse_end'         => ((request()->method() === 'POST') ? 'required|' : '') . 'max:177|min:1|integer',

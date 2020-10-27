@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use League\Fractal\Pagination\IlluminatePaginatorAdapter;
 use App\Traits\AnnotationTags;
+use GuzzleHttp\Client;
 
 class BookmarksController extends APIController
 {
@@ -86,6 +87,15 @@ class BookmarksController extends APIController
         $sort_dir   = checkParam('sort_dir') ?? 'asc';
         $query      = checkParam('query');
 
+        $content_config = config('services.content');
+        $book_bible_map = array();
+        if (!empty($content_config['url']) && $query) {
+            $client = new Client();
+            $res = $client->get($content_config['url'] . 'bibles/book/search/'.
+                $query.'?v=4&key=' . $content_config['key']);
+            $book_bible_map = json_decode($res->getBody() . '', true);
+        }
+
         $bookmarks = Bookmark::with('tags')
             ->where('user_bookmarks.user_id', $user_id)
             ->when($bible_id, function ($q) use ($bible_id) {
@@ -96,14 +106,32 @@ class BookmarksController extends APIController
                 $q->where('user_bookmarks.chapter', $chapter);
             })->when($sort_by, function ($q) use ($sort_by, $sort_dir) {
                 $q->orderBy('user_bookmarks.' . $sort_by, $sort_dir);
-            })->when($query, function ($q) use ($query) {
-                $dbp_database = config('database.connections.dbp.database');
-                $q->join($dbp_database . '.bible_books as bible_books', function ($join) use ($query) {
-                    $join->on('user_bookmarks.bible_id', '=', 'bible_books.bible_id')
-                        ->on('user_bookmarks.book_id', '=', 'bible_books.book_id');
-                });
-                $q->where('bible_books.name', 'like', '%' . $query . '%');
+            })->when($query, function ($q) use ($query, $content_config, $book_bible_map) {
+                if (empty($content_config['url'])) {
+                    // Local content
+                    $dbp_database = config('database.connections.dbp.database');
+                    $q->join($dbp_database . '.bible_books as bible_books', function ($join) use ($query) {
+                        $join->on('user_bookmarks.bible_id', '=', 'bible_books.bible_id')
+                            ->on('user_bookmarks.book_id', '=', 'bible_books.book_id');
+                    });
+                    $q->where('bible_books.name', 'like', '%' . $query . '%');
+                } else {
+                    // Remote content
+                    // do the bible_id filter list
+                    $q->whereIn('user_notes.bible_id', array_keys($book_bible_map));
+                }
             })->paginate($limit);
+
+        // do we need final filter?
+        if (!empty($content_config['url']) && $query) {
+            // filter by book_id $query filter
+            $collection = $bookmarks->getCollection(); // get collections for modification
+            $final_bookmarks = $collection->filter(function($bookmark) use ($book_bible_map) {
+                // only include where we have bible_id and book_id in $map
+                return in_array($bookmark->book_id, $map[$bookmark->bible_id]);
+            });
+            $bookmarks->setCollection($final_bookmarks); // save back into bookmarks
+        }
 
         $bookmarkCollection = $bookmarks->getCollection();
         $bookmarkPagination = new IlluminatePaginatorAdapter($bookmarks);
@@ -281,15 +309,30 @@ class BookmarksController extends APIController
 
     private function validateBookmark()
     {
-        $validator = Validator::make(request()->all(), [
-            'bible_id'    => ((request()->method() === 'POST') ? 'required|' : '') . 'exists:dbp.bibles,id',
+        $checks = [
+            //'bible_id'    => ((request()->method() === 'POST') ? 'required|' : '') . 'exists:dbp.bibles,id',
             'user_id'     => ((request()->method() === 'POST') ? 'required|' : '') . 'exists:dbp_users.users,id',
-            'book_id'     => ((request()->method() === 'POST') ? 'required|' : '') . 'exists:dbp.books,id',
+            //'book_id'     => ((request()->method() === 'POST') ? 'required|' : '') . 'exists:dbp.books,id',
             'chapter'     => ((request()->method() === 'POST') ? 'required|' : '') . 'max:150|min:1|integer',
             'verse_start' => ((request()->method() === 'POST') ? 'required|' : '') . 'max:177|min:1|integer'
-        ]);
+        ];
+        $content_config = config('services.content');
+        $errors = array();
+        if (empty($content_config['url'])) {
+            $checks['bible_id'] = (($request->method === 'POST') ? 'required|' : '') . 'exists:dbp.bibles,id';
+            $checks['book_id']  = (($request->method === 'POST') ? 'required|' : '') . 'exists:dbp.books,id';
+        } else {
+            $checks['bible_id'] = (($request->method === 'POST') ? 'required|' : '');
+            $checks['book_id']  = (($request->method === 'POST') ? 'required|' : '');
+            if ($request->method === 'POST') {
+                // FIXME
+            }
+        }
+        $validator = Validator::make(request()->all(), $checks);
         if ($validator->fails()) {
             return ['errors' => $validator->errors()];
         }
+
+        return null;
     }
 }

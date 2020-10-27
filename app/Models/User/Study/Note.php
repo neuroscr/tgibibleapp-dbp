@@ -10,6 +10,7 @@ use App\Models\User\User;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Crypt;
+use GuzzleHttp\Client;
 
 /**
  * App\Models\User\Note
@@ -238,6 +239,22 @@ class Note extends Model
                 ->get()
                 ->pluck('verse_text');
             return implode(' ', $verses->toArray());
+        } else {
+            $bible_id = $this['bible_id'];
+            $book_id = $this['book_id'];
+            $chapter = $this['chapter'];
+            $verse_start = $this['verse_start'];
+
+            $verse_data = cacheRemember('book_verse_text_data', [
+              $bible_id, $book_id, $chapter, $verse_start], now()->addDay(), function () use ($bible_id, $book_id, $chapter, $verse_start, $content_config) {
+                $client = new Client();
+                $res = $client->get($content_config['url'] . 'bibles/' .
+                   $bible_id . '/book/' . $book_id . '/' .
+                   $chapter . '/' . $verse_start .
+                   '?v=4&key=' . $content_config['key']);
+                return $res->getBody() . '';
+            });
+            return $verse_data;
         }
     }
 
@@ -257,6 +274,15 @@ class Note extends Model
             $ctitle = optional($bible->translations->where('language_id', $GLOBALS['i18n_id'])->first())->name;
             $vtitle = optional($bible->vernacularTranslation)->name;
             return ($vtitle ? $vtitle : $ctitle);
+        } else {
+            $bible_id = $this['bible_id'];
+            $bible_name = cacheRemember('bible_name', [$bible_id, $GLOBALS['i18n_id']], now()->addDay(), function () use ($bible_id, $content_config) {
+                $client = new Client();
+                $res = $client->get($content_config['url'] . 'bibles/' . $bible_id
+                  . '/name/' . $GLOBALS['i18n_id'] . '?v=4&key=' . $content_config['key']);
+                return $res->getBody().'';
+            });
+            return $bible_name;
         }
     }
 }

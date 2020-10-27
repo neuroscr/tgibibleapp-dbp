@@ -10,6 +10,7 @@ use League\Fractal\Pagination\IlluminatePaginatorAdapter;
 use Validator;
 use App\Traits\CheckProjectMembership;
 use App\Traits\AnnotationTags;
+use GuzzleHttp\Client;
 
 class NotesController extends APIController
 {
@@ -73,6 +74,15 @@ class NotesController extends APIController
         $limit      = ($limit > 50) ? 50 : $limit;
         $query      = checkParam('query');
 
+        $content_config = config('services.content');
+        $map = array();
+        if (!empty($content_config['url']) && $query) {
+            $client = new Client();
+            $res = $client->get($content_config['url'] . 'bibles/book/search/'.
+                $query.'?v=4&key=' . $content_config['key']);
+            $map = json_decode($res->getBody() . '', true);
+        }
+
         $notes = Note::with('tags')
             ->where('user_notes.user_id', $user_id)
             ->when($bible_id, function ($q) use ($bible_id) {
@@ -83,18 +93,37 @@ class NotesController extends APIController
                 $q->orderBy('user_notes.' . $sort_by, $sort_dir);
             })->when($chapter_id, function ($q) use ($chapter_id) {
                 $q->where('user_notes.chapter', $chapter_id);
-            })->when($query, function ($q) use ($query) {
-                $dbp_database = config('database.connections.dbp.database');
-                $q->join($dbp_database . '.bible_books as bible_books', function ($join) use ($query) {
-                    $join->on('user_notes.bible_id', '=', 'bible_books.bible_id')
-                        ->on('user_notes.book_id', '=', 'bible_books.book_id');
-                });
-                $q->where('bible_books.name', 'like', '%' . $query . '%');
+            })->when($query, function ($q) use ($query, $content_config, $map) {
+                if (empty($content_config['url'])) {
+                    // Local content
+                    $dbp_database = config('database.connections.dbp.database');
+                    $q->join($dbp_database . '.bible_books as bible_books', function ($join) use ($query) {
+                        $join->on('user_notes.bible_id', '=', 'bible_books.bible_id')
+                             ->on('user_notes.book_id', '=', 'bible_books.book_id');
+                    });
+                    $q->where('bible_books.name', 'like', '%' . $query . '%');
+                } else {
+                    // Remote content
+                    // do the bible_id filter list
+                    $q->whereIn('user_notes.bible_id', array_keys($map));
+                }
             })->paginate($limit);
+
+        // do we need final filter?
+        if (!empty($content_config['url']) && $query) {
+            // filter by book_id $query filter
+            $collection = $notes->getCollection(); // get collections for modification
+            $final_notes = $collection->filter(function($note) use ($map) {
+                // only include where we have bible_id and book_id in $map
+                return in_array($note->book_id, $map[$note->bible_id]);
+            });
+            $notes->setCollection($final_notes); // save back into notes
+        }
 
         if (!$notes) {
             return $this->setStatusCode(404)->replyWithError('No User found for the specified ID');
         }
+
         return $this->reply(fractal($notes->getCollection(), UserNotesTransformer::class)->paginateWith(new IlluminatePaginatorAdapter($notes)));
     }
 

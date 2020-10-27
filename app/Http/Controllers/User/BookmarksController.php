@@ -118,7 +118,7 @@ class BookmarksController extends APIController
                 } else {
                     // Remote content
                     // do the bible_id filter list
-                    $q->whereIn('user_notes.bible_id', array_keys($book_bible_map));
+                    $q->whereIn('user_bookmarks.bible_id', array_keys($book_bible_map));
                 }
             })->paginate($limit);
 
@@ -127,8 +127,8 @@ class BookmarksController extends APIController
             // filter by book_id $query filter
             $collection = $bookmarks->getCollection(); // get collections for modification
             $final_bookmarks = $collection->filter(function($bookmark) use ($book_bible_map) {
-                // only include where we have bible_id and book_id in $map
-                return in_array($bookmark->book_id, $map[$bookmark->bible_id]);
+                // only include where we have bible_id and book_id in $book_bible_map
+                return in_array($bookmark->book_id, $book_bible_map[$bookmark->bible_id]);
             });
             $bookmarks->setCollection($final_bookmarks); // save back into bookmarks
         }

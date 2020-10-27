@@ -17,6 +17,7 @@ Route::name('v4_media_stream_ts')->get('bible/filesets/{fileset_id}/{book_id}-{c
 // VERSION 4 | Bible
 Route::name('v4_bible.books')->get('bibles/{bible_id}/book/{book?}',               'Bible\BiblesController@books');
 Route::name('v4_bible.bookSearch')->get('bibles/book/search/{query?}',                  'Bible\BiblesController@bookSearch');
+Route::name('v4_bible.bookVerse')->get('bibles/{bible_id}/book/{book_id?}/{chapter?}/{verse_start?}',           'Bible\BiblesController@bookVerse');
 Route::name('v4_bible_equivalents.all')->get('bible/equivalents',                  'Bible\BibleEquivalentsController@index');
 Route::name('v4_bible.links')->get('bibles/links',                                 'Bible\BibleLinksController@index');
 Route::name('v4_bible_books_all')->get('bibles/books/',                            'Bible\BooksController@index');
@@ -26,6 +27,7 @@ Route::name('v4_bible.all')->get('bibles',                                      
 Route::name('v4_bible.defaults')->get('bibles/defaults/types',                     'Bible\BiblesController@defaults');
 Route::name('v4_bible.copyright')->get('bibles/{bible_id}/copyright',              'Bible\BiblesController@copyright');
 Route::name('v4_bible.getAudio')->get('bibles/{bible_id?}/audio',                  'Bible\BiblesController@getAudio');
+
 Route::name('v4_bible.chapter')
     ->middleware('APIToken')->get('bibles/{bible_id}/chapter',                     'Bible\BiblesController@chapter');
 Route::name('v4_bible.chapter.annotations')

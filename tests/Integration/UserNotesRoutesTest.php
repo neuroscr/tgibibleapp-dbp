@@ -41,6 +41,7 @@ class UserNotesRoutesTest extends ApiV4Test
         $this->assertEquals("English Standard Version", $notes[0]->bible_name);
         // getVerseTextAttribute test
         $this->assertEquals("For the wages of sin is death, but the free gift of God is eternal life in Christ Jesus our Lord.", $notes[0]->verse_text);
+        sleep(10);
     }
 
     /**
@@ -69,6 +70,7 @@ class UserNotesRoutesTest extends ApiV4Test
         $this->assertEquals("English Standard Version", $notes[0]->bible_name);
         // getVerseTextAttribute test
         $this->assertEquals("For the wages of sin is death, but the free gift of God is eternal life in Christ Jesus our Lord.", $notes[0]->verse_text);
+        sleep(10);
     }
 
     /**
@@ -91,6 +93,36 @@ class UserNotesRoutesTest extends ApiV4Test
         $result = json_decode($response->getContent());
         $notes = $result->data;
         $this->assertEquals(0, count($notes));
+        sleep(10);
+    }
+
+    /**
+     * @category V4_API
+     * @category Route Name: v4_notes.show
+     * @category Route Path: https://api.dbp.test/users/451869/notes/198319?v=4&key={key}
+     * @see      \App\Http\Controllers\User\NotesController
+     * @group    V4
+     * @group    travis
+     * @test
+     */
+    public function notesShow()
+    {
+        $key = Key::where('key', $this->key)->first();
+        $params = array_merge(['user_id' => 451869, 'id'=>198319], $this->params);
+        $path = route('v4_notes.show', $params);
+        echo "\nTesting: GET $path";
+        $response = $this->withHeaders($this->params)->get($path);
+        $response->assertSuccessful();
+        $notes = json_decode($response->getContent(), true);
+        $this->assertEquals(13, count($notes)); // expecting 13 fields...
+        // transformer test / relationship test
+        // weird no book name here...
+        //$this->assertEquals("Romans", $notes['book_name']);
+        // getBibleNameAttribute test
+        $this->assertEquals("English Standard Version", $notes['bible_name']);
+        // getVerseTextAttribute test
+        $this->assertEquals("For the wages of sin is death, but the free gift of God is eternal life in Christ Jesus our Lord.", $notes['verse_text']);
+        sleep(10);
     }
 
     /**
@@ -115,24 +147,24 @@ class UserNotesRoutesTest extends ApiV4Test
             'notes' => 'A generated test note',
         ];
         $path = route('v4_notes.store', $this->params);
-        echo "\nTesting: $path";
+        echo "\nTesting: POST $path";
         $response = $this->withHeaders($this->params)->post($path, $test_note);
         $response->assertSuccessful();
 
         $test_created_note = json_decode($response->getContent())->data;
 
         $path = route('v4_notes.show', array_merge(['user_id' => $key->user_id,'note_id' => $test_created_note->id], $this->params));
-        echo "\nTesting: $path";
+        echo "\nTesting: GET $path";
         $response = $this->withHeaders($this->params)->get($path);
         $response->assertSuccessful();
 
         $path = route('v4_notes.update', array_merge(['user_id' => $key->user_id,'note_id' => $test_created_note->id], $this->params));
-        echo "\nTesting: $path";
+        echo "\nTesting: PUT $path";
         $response = $this->withHeaders($this->params)->put($path, ['description' => 'A generated test note that has been updated']);
         $response->assertSuccessful();
 
         $path = route('v4_notes.destroy', array_merge(['user_id' => $key->user_id,'note_id' => $test_created_note->id], $this->params));
-        echo "\nTesting: $path";
+        echo "\nTesting: DELETE $path";
         $response = $this->withHeaders($this->params)->delete($path);
         $response->assertSuccessful();
     }

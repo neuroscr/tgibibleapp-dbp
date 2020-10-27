@@ -21,6 +21,7 @@ use App\Models\Bible\BibleDefault;
 use App\Models\Bible\BibleFile;
 use App\Models\Bible\BibleFileset;
 use App\Models\Bible\BibleFileTimestamp;
+use App\Models\Bible\BibleVerse;
 use App\Models\Bible\Book;
 use App\Models\Language\Language;
 use Exception;
@@ -406,6 +407,33 @@ class BiblesController extends APIController
           $map[$book->bible_id][] = $book->book_id;
         }
         return $this->reply($map);
+    }
+
+    public function bookVerse($bible_id, $book_id, $chapter, $verse_start)
+    {
+        $bible = Bible::where('id', $bible_id)->first();
+        $fileset = BibleFileset::join(
+          'bible_fileset_connections as connection',
+          'connection.hash_id',
+          'bible_filesets.hash_id'
+        )
+            ->where('bible_filesets.set_type_code', 'text_plain')
+            ->where('connection.bible_id', $bible->id)
+            ->first();
+              if (!$fileset) {
+                  return '';
+              }
+              $verses = BibleVerse::withVernacularMetaData($bible)
+            ->where('hash_id', $fileset->hash_id)
+            ->where('bible_verses.book_id', $book_id)
+            ->where('verse_start', $verse_start)
+            ->where('chapter', $chapter)
+            ->orderBy('verse_start')
+            ->select(['bible_verses.verse_text'])
+            ->get()
+            ->pluck('verse_text');
+
+        return $this->reply(implode(' ', $verses->toArray()));
     }
 
     private function processActiveBooks($books, $active_books, $set_type_code)

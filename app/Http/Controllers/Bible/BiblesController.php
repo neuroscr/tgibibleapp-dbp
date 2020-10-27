@@ -272,6 +272,21 @@ class BiblesController extends APIController
         return $this->reply(fractal($bible, new BibleTransformer(), $this->serializer));
     }
 
+    public function showName($id, $language)
+    {
+        $access_control = $this->accessControl($this->key);
+        $cache_params = [$id, $access_control->string];
+
+        $bible = Bible::whereId($id)->with(['translations'])->first();
+        if (!$bible) {
+            return $this->setStatusCode(404)->replyWithError(trans('api.bibles_errors_404', ['bible_id' => $id]));
+        }
+        $ctitle = optional($bible->translations->where('language_id', $language)->first())->name;
+        $vtitle = optional($bible->vernacularTranslation)->name;
+
+        return $this->reply($vtitle ? $vtitle : $ctitle);
+    }
+
     /**
      *
      * @OA\Get(
@@ -375,6 +390,22 @@ class BiblesController extends APIController
         }
 
         return $this->reply(fractal($books, new BooksTransformer));
+    }
+
+    public function bookSearch($query)
+    {
+        $books = BibleBook::where('name', 'like', '%'.$query.'%')->select(['bible_id', 'book_id'])->get();
+        // expose bible_id
+        $map = array();
+        foreach($books as $book) {
+          $book->setHidden([])->setVisible(['bible_id', 'book_id']);
+          // group this way to minimize bandwidth for large result sets
+          if (!isset($map[$book->bible_id])) {
+            $map[$book->bible_id] = array();
+          }
+          $map[$book->bible_id][] = $book->book_id;
+        }
+        return $this->reply($map);
     }
 
     private function processActiveBooks($books, $active_books, $set_type_code)

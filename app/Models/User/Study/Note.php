@@ -252,7 +252,7 @@ class Note extends Model
                    $bible_id . '/book/' . $book_id . '/' .
                    $chapter . '/' . $verse_start .
                    '?v=4&key=' . $content_config['key']);
-                return $res->getBody() . '';
+                return trim($res->getBody() . '', '"');
             });
             return $verse_data;
         }
@@ -280,7 +280,7 @@ class Note extends Model
                 $client = new Client();
                 $res = $client->get($content_config['url'] . 'bibles/' . $bible_id
                   . '/name/' . $GLOBALS['i18n_id'] . '?v=4&key=' . $content_config['key']);
-                return $res->getBody().'';
+                return trim($res->getBody().'', '"');
             });
             return $bible_name;
         }

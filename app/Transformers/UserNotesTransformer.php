@@ -55,7 +55,6 @@ class UserNotesTransformer extends TransformerAbstract
             // getBibleNameAttribute
             $bible_name = cacheRemember('bible_name', [$note->bible_id, $GLOBALS['i18n_id']], now()->addDay(), function () use ($note, $content_config) {
                 $client = new Client();
-                echo "Looking up<br>\n";
                 $res = $client->get($content_config['url'] . 'bibles/' . $note->bible_id
                   . '/name/' . $GLOBALS['i18n_id'] . '?v=4&key=' . $content_config['key']);
                 return $res->getBody().'';

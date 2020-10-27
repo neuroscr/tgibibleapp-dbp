@@ -120,7 +120,6 @@ class UserBookmarkRoutesTest extends ApiV4Test
     {
         // we have one key (test-key)
         $key = Key::where('key', $this->key)->first();
-        $this->markTestIncomplete('store gives 500');
 
         $test_bookmark = [
             'bible_id'      => 'ENGESV',
@@ -132,21 +131,25 @@ class UserBookmarkRoutesTest extends ApiV4Test
         $path = route('v4_bookmarks.store', Arr::add($this->params, 'user_id', $key->user_id));
         echo "\nTesting: POST $path";
         $response = $this->withHeaders($this->params)->post($path, $test_bookmark);
-        echo 'POST:', $response->getContent(), "\n";
         $response->assertSuccessful();
+        $result = json_decode($response->getContent().'', true);
+        $this->assertEquals(1, count($result['meta']));
+        $this->assertEquals('Bookmark Created successfully', $result['meta']['success']);
 
         $test_bookmark = json_decode($response->getContent())->data;
 
         $path = route('v4_bookmarks.update', array_merge(['user_id' => $key->user_id,'bookmark_id' =>$test_bookmark->id], $this->params));
         echo "\nTesting: PUT $path";
         $response = $this->withHeaders($this->params)->put($path, ['book_id' => 'EXO']);
-        echo 'PUT:', $response->getContent(), "\n";
         $response->assertSuccessful();
+        $result = json_decode($response->getContent().'', true);
+        $this->assertEquals(1, count($result['meta']));
+        $this->assertEquals('Bookmark Successfully updated', $result['meta']['success']);
 
         $path = route('v4_bookmarks.destroy', array_merge(['user_id' => $key->user_id,'bookmark_id' =>$test_bookmark->id], $this->params));
         echo "\nTesting: DELETE $path";
         $response = $this->withHeaders($this->params)->delete($path);
-        echo 'DELETE:', $response->getContent(), "\n";
         $response->assertSuccessful();
+        $this->assertEquals('"bookmark successfully deleted"', $response->getContent());
     }
 }

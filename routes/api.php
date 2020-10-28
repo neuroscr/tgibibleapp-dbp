@@ -24,8 +24,8 @@ Route::name('v4_bible.links')->get('bibles/links',                              
 Route::name('v4_bible_books_all')->get('bibles/books/',                            'Bible\BooksController@index');
 Route::name('v4_bible.one')->get('bibles/{bible_id}',                              'Bible\BiblesController@show');
 Route::name('v4_bible.oneName')->get('bibles/{bible_id}/name/{language}',           'Bible\BiblesController@showName');
+Route::name('v4_bible.bibleVerses')->get('bibles/{bible_id}/verses',               'Bible\BiblesController@bibleVerses');
 Route::name('v4_bible.all')->get('bibles',                                         'Bible\BiblesController@index');
-Route::name('v4_bible.verseSearch')->get('bibles/{bible_id}/search/{query?}',      'Bible\BiblesController@verseSearch');
 Route::name('v4_bible.defaults')->get('bibles/defaults/types',                     'Bible\BiblesController@defaults');
 Route::name('v4_bible.copyright')->get('bibles/{bible_id}/copyright',              'Bible\BiblesController@copyright');
 Route::name('v4_bible.getAudio')->get('bibles/{bible_id?}/audio',                  'Bible\BiblesController@getAudio');

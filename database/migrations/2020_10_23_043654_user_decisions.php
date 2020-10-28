@@ -15,7 +15,7 @@ class UserDecisions extends Migration
     {
         Schema::connection('dbp_users')->table('users', function (Blueprint $table) {
             $table->string('decision_name')->after('remember_token')->nullable()->default(null);
-            $table->integer('decision_date')->after('decision_name')->unsigned()->nullable()->default(null);
+            $table->string('decision_date')->after('decision_name')->nullable()->default(null);
             $table->boolean('decision_want_resources')->after('decision_date')->nullable()->default(null);
         });
     }

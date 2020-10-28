@@ -39,7 +39,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property boolean $verified
  * @property string $email_token
  * @property string $decision_name
- * @property integer $decision_date
+ * @property string $decision_date
  * @property boolean $decision_want_resources
  *
  * @OA\Schema (

@@ -20,10 +20,12 @@ use App\Models\User\UserDownload;
 use App\Models\Bible\BibleDefault;
 use App\Models\Bible\BibleFile;
 use App\Models\Bible\BibleFileset;
+use App\Models\Bible\BibleVerse;
 use App\Models\Bible\BibleFileTimestamp;
 use App\Models\Bible\BibleVerse;
 use App\Models\Bible\Book;
 use App\Models\Language\Language;
+use Illuminate\Support\Facades\DB;
 use Exception;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
@@ -286,6 +288,42 @@ class BiblesController extends APIController
         $vtitle = optional($bible->vernacularTranslation)->name;
 
         return $this->reply($vtitle ? $vtitle : $ctitle);
+    }
+
+    public function BibleVerses($bible_id)
+    {
+        // 3-31k
+        //$q = BibleBook::where('bible_books.bible_id', '=', $bible_id)
+        $q = Bible::where('bibles.id', '=', $bible_id)
+          ->join('bible_books', 'bible_books.bible_id', 'bibles.id')
+          ->join('bible_fileset_connections as connection', 'connection.bible_id', 'bible_books.bible_id')
+          ->join('bible_filesets as filesets', function ($join) {
+            $join->on('filesets.hash_id', '=', 'connection.hash_id');
+          })
+          ->where('filesets.set_type_code', 'text_plain')
+          ->join('bible_verses as bible_verses', function ($join) {
+            $join->on('connection.hash_id', '=', 'bible_verses.hash_id')
+              ->where('bible_verses.book_id', '=', DB::raw('bible_books.book_id'));
+          })
+          ->select(['bibles.versification', 'bible_books.book_id',
+            'chapter', 'verse_start', 'verse_end', 'verse_text']);
+        // one level of nesting could save some more bandwidth
+        $compressed = array();
+        foreach($q->get() as $row) {
+          // {"book_id":"ROM","chapter":1,"verse_start":1,"verse_end":1,"verse_text":"Adam, Seth, Enosh;"}
+          $compressed[] = array(
+            $row->chapter,
+            $row->verse_start,
+            $row->verse_end,
+            $row->verse_text,
+            $row->book_id
+          );
+        }
+        $wrap = array(
+          'versification'=>$row->versification,
+          'verses'=>$compressed
+        );
+        return $this->reply($wrap);
     }
 
     /**

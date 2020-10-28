@@ -239,7 +239,6 @@ class HighlightsController extends APIController
                     // so we'll need to get all the data
                 }
             })->when($sort_by_book, function ($q) {
-                //echo "sort_by_book<br>\n";
                 if (empty($content_config['url'])) {
                     // if sort_by_book, add books/bibles table joins...
                     $dbp_database = config('database.connections.dbp.database');

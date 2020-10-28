@@ -186,9 +186,9 @@ class User extends Authenticatable
      *
      * @OA\Property(
      *   title="decision_date",
-     *   type="integer",
+     *   type="string",
      *   description="Date when they made a decision",
-     *   example="991231"
+     *   example="10/02/2020"
      * )
      *
      */

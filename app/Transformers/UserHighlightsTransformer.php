@@ -59,39 +59,91 @@ class UserHighlightsTransformer extends BaseTransformer
     public function transformForV4(Highlight $highlight)
     {
         $this->checkColorPreference($highlight);
-        if (isset($highlight->fileset_info)) {
-            $highlight_fileset_info = $highlight->fileset_info;
-            $verse_text = $highlight_fileset_info->get('verse_text');
-            $audio_filesets = $highlight_fileset_info->get('audio_filesets');
-        } else {
-            // FIXME:
-            $verse_text = '';
-            $audio_filesets = '';
-        }
 
-        if (!isset($bookmark->book->name)) {
+        if (!isset($highlight->book->name)) {
              // likely remote content set up
              $book_name = '';
              $content_config = config('services.content');
              if (!empty($content_config['url'])) {
-                 // we can pull book name from content server
-                 $book_name = cacheRemember('book_name_data',
-                   [$highlight->bible_id, $highlight->book_id], now()->addDay(),
-                   function () use ($highlight, $content_config) {
-                     $client = new Client();
-                     $res = $client->get($content_config['url'] . 'bibles/' .
-                        $highlight->bible_id . '/book/' . $highlight->book_id .
-                        '?v=4&key=' . $content_config['key']);
-                     $result = json_decode($res->getBody() . '', true);
-                     if ($result && $result['data'] && count($result['data'])) {
-                       return $result['data'][0]['name'];
-                     }
-                 });
+                 if ($highlight->book_name) {
+                     $book_name = $highlight->book_name;
+                     $testament = $highlight->testament;
+                 } else {
+                     // we can pull book name from content server
+                     $client = false;
+                     $book_data = cacheRemember('bible_book_data',
+                       [$highlight->bible_id, $highlight->book_id], now()->addDay(),
+                       function () use ($highlight, $content_config, $client) {
+                         if (!$client) $client = new Client();
+                         $res = $client->get($content_config['url'] . 'bibles/' .
+                            $highlight->bible_id . '/book/' . $highlight->book_id .
+                            '?v=4&key=' . $content_config['key']);
+                         $result = json_decode($res->getBody() . '', true);
+                         if ($result && $result['data'] && count($result['data'])) {
+                           return $result['data'][0];
+                         }
+                     });
+                     $book_name = $book_data['name'];
+                     $testament = $book_data['testament'];
+                 }
              }
          } else {
               // can use relationship to get content locally
-              $book_name = optional($bookmark->book)->name;
+              $book_name = optional($highlight->book)->name;
          }
+
+        if (isset($highlight->fileset_info)) {
+            $highlight_fileset_info = $highlight->fileset_info;
+            $verse_text = $highlight_fileset_info->get('verse_text');
+            // what type is this? collection? array? object?
+            $audio_filesets = $highlight_fileset_info->get('audio_filesets');
+        } else {
+            // likely remote content set up
+            $verse_text = $highlight->verse_text;
+            $audio_filesets = $highlight->audio_filesets;
+            $content_config = config('services.content');
+            // these may not be set if the order isnt' by book, and no chapter/query search
+            if (!empty($content_config['url']) && !$highlight->content_server_checked) {
+                // remote content
+                $bible_id = $highlight['bible_id'];
+                $book_id = $highlight['book_id'];
+                // we're using $testament and $client from above
+                $data = cacheRemember('bible_book_filesets_testament', [$bible_id, $book_id, $testament],
+                  now()->addDay(), function () use ($content_config, $bible_id, $book_id, $testament, $client) {
+                    if (!$client) $client = new Client();
+                    $res = $client->get($content_config['url'] . 'bibles/' .
+                      $bible_id. '/books/'. $book_id . '/testament/' . $testament .
+                      '?v=4&key=' . $content_config['key']);
+                    return json_decode($res->getBody() . '', true);
+                });
+                $audio_filesets = $data['audio_filesets'];
+                if ($data['text_fileset']) {
+                    // not sure this is the same data
+                    // because we're not using withVernacularMetaData filter
+                    // withVernacularMetaData is tough because we'd need to pass each highlight
+
+                    // get verse data
+                    $bible_verse_text = cacheRemember('bible_verses', [$bible_id],
+                      now()->addDay(), function () use ($content_config, $bible_id, $client) {
+                        if (!$client) $client = new Client();
+                        $res = $client->get($content_config['url'] . 'bibles/'
+                          .  $bible_id . '/verses?v=4&key=' . $content_config['key']);
+                        return json_decode($res->getBody() . '', true);
+                    });
+                    $bible_verse = collect($bible_verse_text['verses'])->filter(function($arr) use ($highlight) {
+                        $inBook     = $arr[4] == $highlight->book_id;     if (!$inBook) return false;
+                        $inChapter  = $arr[0] == $highlight->chapter;     if (!$inChapter) return false;
+                        $afterStart = $arr[1] >= $highlight->verse_start; if (!$afterStart) return false;
+                        $beforEnd   = $arr[2] <= $highlight->verse_end;   if (!$beforEnd) return false;
+                        return true;
+                    });
+                    if ($bible_verse->count()) {
+                        $arr = $bible_verse->first();
+                        $verse_text = $arr[3];
+                    }
+                }
+            }
+        }
 
         return [
             'id'                => (int) $highlight->id,

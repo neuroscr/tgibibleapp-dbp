@@ -218,5 +218,7 @@ class Highlight extends Model
 
             return collect(['verse_text' => $verse_text, 'audio_filesets' => array_values($available_filesets)]);
         }
+        // Do we need to pull it here?
+        // it's slow, so no need to eagerly load it
     }
 }

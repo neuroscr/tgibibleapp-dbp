@@ -131,15 +131,6 @@ class HighlightsController extends APIController
 
         // now that most validation is done, lets do something that takes time
 
-        $content_config = config('services.content');
-        $book_bible_map = array();
-        if (!empty($content_config['url']) && $query) {
-            // FIXME:
-            $client = new Client();
-            $res = $client->get($content_config['url'] . 'bibles/book/search/'.
-                $query.'?v=4&key=' . $content_config['key']);
-            $book_bible_map = json_decode($res->getBody() . '', true);
-        }
 
         $bible_id     = checkParam('bible_id');
         $book_id      = checkParam('book_id');
@@ -163,10 +154,10 @@ class HighlightsController extends APIController
         ];
         $order_by = DB::raw('user_highlights.' . $sort_by);
 
+        $content_config = config('services.content');
         if ($sort_by_book) {
 
             // get the dbp.books order
-            $content_config = config('services.content');
             if (empty($content_config['url'])) {
                 // Local content
                 $book_order_query = cacheRemember('book_order_columns', [], now()->addDay(), function () {
@@ -190,6 +181,7 @@ class HighlightsController extends APIController
                     return json_decode($res->getBody().'', true);
                 });
                 $book_order_map = array_flip($book_order);
+                $order_by = DB::raw('user_highlights.chapter, user_highlights.verse_start');
             }
         }
 
@@ -205,7 +197,7 @@ class HighlightsController extends APIController
                 $color = str_replace('#', '', $color);
                 $color = explode(',', $color);
                 $q->whereIn('user_highlight_colors.hex', $color);
-            })->when($query, function ($q) use ($query, $content_config, $book_bible_map) {
+            })->when($query, function ($q) use ($query, $content_config) {
                 if (empty($content_config['url'])) {
                     $dbp_database = config('database.connections.dbp.database');
                     // join to get verse_text access
@@ -235,7 +227,7 @@ class HighlightsController extends APIController
                     });
                 } else {
                     // Remote content
-                    // we can't filter here because it's verse or book name
+                    // we can't filter here because it's verse OR book name
                     // so we'll need to get all the data
                 }
             })->when($sort_by_book, function ($q) {
@@ -283,43 +275,79 @@ class HighlightsController extends APIController
                     $biblebooks[$key] = array();
                 }
                 $biblebooks[$key][$hl->book_id] = 1;
+                // might be faster if we break down HLs into books
                 $map[$key][] = $hl;
             }
             unset($highlight_collection); // free memory
+
+            // now process each bible's highlights
             $client = new Client(); // reuseable client
             $keepers = array();
             foreach($map as $slug => $hlrows) {
+                //echo "Start[$slug] [", join(',', array_keys($biblebooks[$slug])), "]<br>\n";
                 // download a copy of the verses in bible (31k rows, ~1-4MB)
                 $bible_verse_text = cacheRemember('bible_verses', [$slug],
                   now()->addDay(), function () use ($content_config, $slug, $client) {
-                    echo "Downloading\n";
                     $res = $client->get($content_config['url'] . 'bibles/' .  $slug .
                       '/verses?v=4&key=' . $content_config['key']);
                     return json_decode($res->getBody() . '', true);
                 });
+
+                // bible_verse_text['books'] contains book_id, name, testament, verses
                 // verses are sent in this order:
-                // 0=>chapter, 1=>verse_start, 2=>verse_end, 3=>verse_text, 4=>book_id
+                // 0=>chapter, 1=>verse_start, 2=>verse_end, 3=>verse_text
+
+                if (0) {
+                  foreach($bible_verse_text['books'] as $book) {
+                    echo "Have [", $book['book_id'], "]<br>\n";
+                  }
+                }
 
                 // gives a 4-10x reduction
-                $bible_verse = collect($bible_verse_text['verses'])->filter(function($arr) use ($slug, $biblebooks) {
-                    return in_array($arr[4], $biblebooks[$slug]);
+                $bible_book_verses_arr = collect($bible_verse_text['books'])->filter(function($book) use ($slug, $biblebooks) {
+                    //echo "Looking [", $book['book_id'], "] in [", join(', ', array_keys($biblebooks[$slug])), "]<br>\n";
+                    return in_array($book['book_id'], array_keys($biblebooks[$slug]));
                 });
+                // make book_id to book_data lookup map
+                $bible_book_verses_map = array();
+                foreach($bible_book_verses_arr as $book) {
+                    //echo "Adding [", $book['book_id'], "]\n";
+                    $bible_book_verses_map[$book['book_id']] = $book;
+                }
+                unset($bible_book_verses_arr); // free memory
+
+                // only keep the books we need
+                // sometimes removes 0, other times 66:1-7
+                $audio_sets = array();
+                foreach($biblebooks[$slug] as $book_id=>$one) {
+                    $audio_sets[$book_id] = $bible_verse_text['audio_filesets'][$book_id];
+                }
 
                 $sort_position = $book_order_map[$bible_verse_text['versification']];
+                // done with bible_verse_text
                 unset($bible_verse_text); // free memory
 
                 // filter bible_verse_text by hlrows
                 foreach($hlrows as $i => $hl) {
-                    $filtered = $bible_verse->filter(function($arr) use ($hl, $chapter_id, $query) {
+                    if (!isset($bible_book_verses_map[$hl->book_id])) {
+                        //echo "No content for [$slug][", $hl->book_id, "]<br>\n";
+                        continue;
+                    }
+                    $book_data = $bible_book_verses_map[$hl->book_id];
+                    $testament = $book_data['testament'];
+                    $book_name = $book_data['name'];
+                    $filtered = collect($book_data['verses'])->filter(function($arr) use ($hl, $chapter_id, $query) {
                         // join
-                        $inBook     = $arr[4] == $hl->book_id;     if (!$inBook) return false;
                         $inChapter  = $arr[0] == $hl->chapter;     if (!$inChapter) return false;
                         $afterStart = $arr[1] >= $hl->verse_start; if (!$afterStart) return false;
                         $beforEnd   = $arr[2] <= $hl->verse_end;   if (!$beforEnd) return false;
                         // when chapter_id
                         $chapterOk = $chapter_id ? $chapter_id === $hl->chapter : true;
                         // when query
-                        $inQuery = $query ? stripos($arr[3], $query) !== false : true;
+                        $inQuery = $query ? (
+                            // in verse or book name
+                            stripos($book_name, $query) !== false || stripos($arr[3], $query) !== false
+                          ): true;
                         return $chapterOk && $inQuery;
                     });
 
@@ -327,9 +355,16 @@ class HighlightsController extends APIController
                     foreach($filtered as $arr) {
                         // handles book, chapter, verse_start ordering (and continues to order by verse_end and book_id)
                         // this variable has to be unique per $hl record
-                        $sortable_key = $sort_position . '_'. $arr[0] . '_' . $arr[1] . '_' . $arr[2] . '_'. $arr[4];
+                        // FIXME: non sort_by_book support
+                        // $sort_by can be any field in user_highlights, so makes it quite tough...
+                        $sortable_key = $sort_position . '_'. $arr[0] . '_' . $arr[1] . '_' . $arr[2] . '_'. $hl->book_id;
                         // do we already have this key?
                         if (!isset($keepers[$sortable_key])) {
+                            $hl->audio_filesets = $audio_sets[$hl->book_id][$testament];
+                            $hl->verse_text = $arr[3]; // cache verse_text, so we don't have to look it up later
+                            $hl->book_name = $book_name;
+                            $hl->testament = $testament;
+                            $hl->content_server_checked = true;
                             $keepers[$sortable_key] = $hl;
                         }
                     } // end filtered foreach
@@ -351,10 +386,11 @@ class HighlightsController extends APIController
                 $highlight_collection->count(),
                 $limit,
                 $page,
+                // FIXME include query/chapter etc...
                 ['path' => url('api/users/' . $user_id . '/highlights?v=4&key=' . $this->key)]
             );
 
-            return $paginate;
+            return fractal($paginate, UserHighlightsTransformer::class);
         }
 
         // order and paginate this builder

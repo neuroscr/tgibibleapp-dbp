@@ -180,7 +180,11 @@ class HighlightsController extends APIController
                       '?v=4&key=' . $content_config['key']);
                     return json_decode($res->getBody().'', true);
                 });
-                $book_order_map = array_flip($book_order);
+                if (is_array($book_order)) {
+                    $book_order_map = array_flip($book_order);
+                } else {
+                    $book_order_map = array();
+                }
                 $order_by = DB::raw('user_highlights.chapter, user_highlights.verse_start');
             }
         }

@@ -113,9 +113,7 @@ class CollectionsController extends APIController
 
     private function getCollections($featured, $limit, $sort_by, $sort_dir, $user, $language_id)
     {
-        $collections = Collection::with('days')
-            ->with('user')
-            //->where('draft', 0)
+        $collections = Collection::with('user')
             ->when($language_id, function ($q) use ($language_id) {
                 $q->where('collections.language_id', $language_id);
             })
@@ -128,7 +126,6 @@ class CollectionsController extends APIController
                 $q->select(['plans.*', 'user_plans.start_date', 'user_plans.percentage_completed']);
             }) */
             ->orderBy($sort_by, $sort_dir)->paginate($limit);
-
         /*
         foreach ($collections as $collection) {
             $collection->total_days = sizeof($collection->days);

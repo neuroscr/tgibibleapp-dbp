@@ -126,6 +126,7 @@ class CollectionsController extends APIController
                 $q->select(['plans.*', 'user_plans.start_date', 'user_plans.percentage_completed']);
             }) */
             ->orderBy($sort_by, $sort_dir)->paginate($limit);
+
         /*
         foreach ($collections as $collection) {
             $collection->total_days = sizeof($collection->days);

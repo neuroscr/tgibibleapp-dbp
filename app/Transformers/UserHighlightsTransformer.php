@@ -130,16 +130,25 @@ class UserHighlightsTransformer extends BaseTransformer
                           .  $bible_id . '/verses?v=4&key=' . $content_config['key']);
                         return json_decode($res->getBody() . '', true);
                     });
-                    $bible_verse = collect($bible_verse_text['verses'])->filter(function($arr) use ($highlight) {
-                        $inBook     = $arr[4] == $highlight->book_id;     if (!$inBook) return false;
-                        $inChapter  = $arr[0] == $highlight->chapter;     if (!$inChapter) return false;
-                        $afterStart = $arr[1] >= $highlight->verse_start; if (!$afterStart) return false;
-                        $beforEnd   = $arr[2] <= $highlight->verse_end;   if (!$beforEnd) return false;
-                        return true;
-                    });
-                    if ($bible_verse->count()) {
-                        $arr = $bible_verse->first();
-                        $verse_text = $arr[3];
+                    if (isset($bible_verse_text['books'])) {
+                        // make book_id to book_data lookup map
+                        $bible_book_verses_map = array();
+                        foreach($bible_verse_text['books'] as $book) {
+                            $bible_book_verses_map[$book['book_id']] = $book;
+                        }
+                        if (isset($bible_book_verses_map[$highlight->book_id])) {
+                            $bible_verse = collect($bible_book_verses_map[$highlight->book_id])->filter(function($arr) use ($highlight) {
+                                //$inBook     = $arr[4] == $highlight->book_id;     if (!$inBook) return false;
+                                $inChapter  = $arr[0] == $highlight->chapter;     if (!$inChapter) return false;
+                                $afterStart = $arr[1] >= $highlight->verse_start; if (!$afterStart) return false;
+                                $beforEnd   = $arr[2] <= $highlight->verse_end;   if (!$beforEnd) return false;
+                                return true;
+                            });
+                            if ($bible_verse->count()) {
+                                $arr = $bible_verse->first();
+                                $verse_text = $arr[3];
+                            }
+                        }
                     }
                 }
             }

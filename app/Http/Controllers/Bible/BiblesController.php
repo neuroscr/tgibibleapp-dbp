@@ -1033,9 +1033,25 @@ class BiblesController extends APIController
      */
     public function annotations(Request $request, $bible_id)
     {
-        $bible = Bible::whereId($bible_id)->first();
-        if (!$bible) {
-            return $this->setStatusCode(404)->replyWithError('Bible not found');
+        $content_config = config('services.content');
+        if (empty($content_config['url'])) {
+            $map = cacheRemember('bible_exist', [$bible_id], now()->addDay(),
+              function () use ($bible_id, $content_config) {
+                $client = new Client();
+                $res = $client->get($content_config['url'] . 'bibles/'.
+                      $bible_id.'/name/'.$GLOBALS['i18n_id'].'?v=4&key=' . $content_config['key']);
+                $map = json_decode($res->getBody() . '', true);
+                return $map;
+            });
+            // 404
+            if ($map['error']) {
+                return $this->setStatusCode(404)->replyWithError('Bible not found');
+            }
+        } else {
+            $bible = Bible::whereId($bible_id)->first();
+            if (!$bible) {
+                return $this->setStatusCode(404)->replyWithError('Bible not found');
+            }
         }
 
         $user = $request->user();
@@ -1065,14 +1081,17 @@ class BiblesController extends APIController
         $bookmarks_controller = new BookmarksController();
         $notes_controller = new NotesController();
         $request->request->add(['bible_id' => $bible_id]);
-        $result->highlights = $highlights_controller->index($request, $user->id)->original['data'];
+        if (empty($content_config['url'])) {
+            $result->highlights = $highlights_controller->index($request, $user->id)->original['data'];
+        } else {
+            $result->highlights = $highlights_controller->index($request, $user->id)->toArray();
+        }
         $result->bookmarks = $bookmarks_controller->index($request, $user->id)->original['data'];
         $result->notes = $notes_controller->index($request, $user->id)->original['data'];
 
         $result->bible_id = $bible->id;
         $result->book_id = $book_id;
         $result->chapter = $chapter;
-
 
         return $this->reply($result);
     }

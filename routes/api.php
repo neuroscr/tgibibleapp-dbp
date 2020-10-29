@@ -23,6 +23,7 @@ Route::name('v4_bible.one')->get('bibles/{bible_id}',                           
 Route::name('v4_bible.all')->get('bibles',                                         'Bible\BiblesController@index');
 Route::name('v4_bible.defaults')->get('bibles/defaults/types',                     'Bible\BiblesController@defaults');
 Route::name('v4_bible.copyright')->get('bibles/{bible_id}/copyright',              'Bible\BiblesController@copyright');
+Route::name('v4_bible.getAudio')->get('bibles/{bible_id?}/audio',                  'Bible\BiblesController@getAudio');
 Route::name('v4_bible.chapter')
     ->middleware('APIToken')->get('bibles/{bible_id}/chapter',                     'Bible\BiblesController@chapter');
 Route::name('v4_bible.chapter.annotations')
@@ -35,6 +36,8 @@ Route::name('v4_filesets.podcast')->get('bibles/filesets/{fileset_id}/podcast', 
 Route::name('v4_filesets.download')->get('bibles/filesets/{fileset_id}/download',  'Bible\BibleFileSetsController@download');
 Route::name('v4_filesets.copyright')->get('bibles/filesets/{fileset_id}/copyright', 'Bible\BibleFileSetsController@copyright');
 Route::name('v4_filesets.show')->get('bibles/filesets/{fileset_id?}',              'Bible\BibleFileSetsController@show');
+Route::name('v4_filesets.showFeatured')->get('bibles/filesets/{fileset_id}/verses',              'Bible\BibleFileSetsController@showFeatured');
+Route::name('v4_filesets.showMultiple')->get('bibles/filesets/{fileset_id?}/playlist',              'Bible\BibleFileSetsController@getPlaylistMeta');
 Route::name('v4_filesets.update')->put('bibles/filesets/{fileset_id}',             'User\Dashboard\BibleFilesetsManagementController@update');
 Route::name('v4_filesets.store')->post('bibles/filesets',             'User\Dashboard\BibleFilesetsManagementController@store');
 Route::name('v4_filesets.books')->get('bibles/filesets/{fileset_id}/books',        'Bible\BooksController@show');

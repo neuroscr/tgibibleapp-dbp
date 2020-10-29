@@ -52,6 +52,7 @@ class UserHighlightTest extends ApiV4Test
             'book_id'           => 'GEN',
             'chapter'           => '1',
             'verse_start'       => '1',
+            'verse_end'         => '40',
             'reference'         => 'Genesis 1:1',
             'highlight_start'   => '10',
             'highlighted_words' => '40',

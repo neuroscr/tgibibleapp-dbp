@@ -458,4 +458,86 @@ class BibleFileSetsController extends APIController
 
         return $fileset_chapters;
     }
+
+    private function getHLSPlaylistItemText($hls_item, &$signed_files,
+      &$playlist_items, &$durations, $item_id, $transaction_id, $content_config,
+      $download)
+    {
+        $playlist_entry = '';
+        $playlist_entry .= "\n#EXTINF:" . $hls_item['duration'] . "," . $item_id;
+        if (isset($hls_item['bytes'])) {
+            $playlist_entry .= "\n#EXT-X-BYTERANGE:" . $hls_item['bytes'] . '@'
+              . $hls_item['offset'];
+        }
+        $file_path = 'audio/' . $hls_item['path'] . '/' . $hls_item['fileset_id']
+          . '/' . $hls_item['file_name'];
+        if (!isset($signed_files[$file_path])) {
+            // authorizeAWS
+            // only enable on FCBH
+            if (empty($content_config['url'])) {
+                $signed_files[$file_path] = $this->signedUrl(
+                  $file_path, $hls_item['asset_id'], $transaction_id
+                );
+            } else {
+                // TGI workaround for testing without access to FCBH (Iam role denied)
+                $signed_files[$file_path] = $file_path;
+            }
+        }
+        $hls_file_path = $download ? $file_path : $signed_files[$file_path];
+        $playlist_entry .= "\n" . $hls_file_path;
+        $playlist_items[] = $playlist_entry;
+        $durations[] = $hls_item['duration'];
+    }
+
+    // per item which has many hls_item sets
+    public function getHLSPlaylistText($hls_items, &$signed_files,
+      &$playlist_items, &$durations, $transaction_id, $item, $download)
+    {
+        // probably don't need position here...
+        $fields = array('duration', 'position', 'bytes', 'offset', 'fileset_id',
+          'asset_id', 'file_name', 'path');
+        $content_config = config('services.content');
+        foreach($hls_items as $hls_item) {
+            // per type processing
+            if ($hls_item['type'] === 'hls') {
+                // mutate subitems if needed
+                $subitems = $hls_item['subitems'];
+                //have item verse range is not 0 to 0
+                if ($item->verse_end && $item->verse_start) {
+                    // processVersesOnTransportStream
+                    // strip off entries based on item->chapter_end/chapter_start vs bible_file->chapter_start
+                    if ($item->chapter_end  === $item->chapter_start) {
+                        // limit by verse range (item->verse_end and item->verse_start)
+                        // but how can we tell the start/stop of transportStream
+                        $subitems = array_splice($subitems, 1, $item->verse_end);
+                        $subitems = array_splice($subitems, $item->verse_start - 1);
+                    } else {
+                        $subitems = array_splice($subitems, 1);
+                        if ($hls_item['chapter_start'] === $item->chapter_start) {
+                            $subitems = array_splice($subitems, $item->verse_start - 1);
+                        } else
+                        if ($hls_item['chapter_start'] === $item->chapter_end) {
+                            $subitems = array_splice($subitems, 0, $item->verse_end);
+                        }
+                    }
+                }
+                // process remaining subitems
+                foreach($subitems as $subitem) {
+                    $patched_item = $hls_item;
+                    foreach($fields as $f) {
+                      $patched_item[$f] = $subitem[$f];
+                    }
+                    $this->getHLSPlaylistItemText($patched_item, $signed_files,
+                      $playlist_items, $durations, $item->id, $transaction_id,
+                      $content_config, $download);
+                }
+            } else {
+                // mp3 type
+                $this->getHLSPlaylistItemText($hls_item, $signed_files,
+                  $playlist_items, $durations, $item->id, $transaction_id,
+                  $content_config, $download);
+            }
+        }
+    }
+
 }

@@ -80,9 +80,6 @@ class UserTransformer extends BaseTransformer
              *       @OA\Property(property="profile",  ref="#/components/schemas/Profile"),
              *       @OA\Property(property="organizations",  ref="#/components/schemas/Organization"),
              *       @OA\Property(property="accounts", type="object",description="The unique identifier for a user's connection to the api and the means of that connection",example={"facebook":"1903random6321","cookie": "43190crumbles1023"}),
-             *       @OA\Property(property="decision_name",     ref="#/components/schemas/User/properties/decision_name"),
-             *       @OA\Property(property="decision_date",     ref="#/components/schemas/User/properties/decision_date"),
-             *       @OA\Property(property="decision_want_resources",     ref="#/components/schemas/User/properties/decision_want_resources"),
              *    )
              * )
              */

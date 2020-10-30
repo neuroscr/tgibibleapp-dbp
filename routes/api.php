@@ -36,7 +36,10 @@ Route::name('v4_filesets.podcast')->get('bibles/filesets/{fileset_id}/podcast', 
 Route::name('v4_filesets.download')->get('bibles/filesets/{fileset_id}/download',  'Bible\BibleFileSetsController@download');
 Route::name('v4_filesets.copyright')->get('bibles/filesets/{fileset_id}/copyright', 'Bible\BibleFileSetsController@copyright');
 Route::name('v4_filesets.show')->get('bibles/filesets/{fileset_id?}',              'Bible\BibleFileSetsController@show');
+// only gives text playlists?
 Route::name('v4_filesets.showMultiple')->get('bibles/filesets/{fileset_id?}/playlist',              'Bible\BibleFileSetsController@getPlaylistMeta');
+Route::name('v4_filesets.showAudio')->get('bibles/filesets/{fileset_id?}/audio',              'Bible\BibleFileSetsController@showAudio');
+Route::name('v4_filesets.showStream')->get('bibles/filesets/{fileset_id?}/stream/{book_id?}',          'Bible\BibleFileSetsController@showStream');
 Route::name('v4_filesets.update')->put('bibles/filesets/{fileset_id}',             'User\Dashboard\BibleFilesetsManagementController@update');
 Route::name('v4_filesets.store')->post('bibles/filesets',             'User\Dashboard\BibleFilesetsManagementController@store');
 Route::name('v4_filesets.books')->get('bibles/filesets/{fileset_id}/books',        'Bible\BooksController@show');

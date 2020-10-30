@@ -76,6 +76,4 @@ class PlaylistRoutesTest extends ApiV4Test
         $result = json_decode($response->getContent());
         $response->assertSuccessful();
     }
-
-
 }

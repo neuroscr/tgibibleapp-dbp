@@ -62,9 +62,6 @@ class UserTransformer extends BaseTransformer
                     'keys'      => $user->keys,
                     'api_token' => $user->api_token,
                     'freshchat_restore_id' => $user ->freshchat_restore_id,
-                    'decision_name' => $user->decision_name,
-                    'decision_date' => $user->decision_date,
-                    'decision_want_resources' => $user->decision_want_resources,
                 ];
 
             /**
@@ -101,9 +98,6 @@ class UserTransformer extends BaseTransformer
                     'organizations' => $user->organizations,
                     'accounts'  => $user->accounts,
                     'freshchat_restore_id' => $user ->freshchat_restore_id,
-                    'decision_name' => $user->decision_name,
-                    'decision_date' => $user->decision_date,
-                    'decision_want_resources' => $user->decision_want_resources
                 ];
         }
     }

@@ -143,7 +143,7 @@ class BibleFileSetsController extends APIController
         // return text_plain for this bible including hash_id
         return $this->reply($text_fileset_copy, [], '');
     }
-  
+
     public function getPlaylistMeta($id = null, $asset_id = null, $set_type_code = null, $cache_key = 'bible_filesets_show2')
     {
         // laravel pass array from route to controller
@@ -263,6 +263,9 @@ class BibleFileSetsController extends APIController
     public function showStream($fileset_id = null, $book_id = null)
     {
         $fileset = BibleFileset::where('id', $fileset_id)->first();
+        if (!$fileset) {
+            return $this->setStatusCode(404)->replyWithError(trans('api.bible_fileset_errors_404'));
+        }
 
         // we need book_id to narrow down the transport streams
         $bible_files = BibleFile::with('streamBandwidth.transportStreamTS')->with('streamBandwidth.transportStreamBytes')->where([

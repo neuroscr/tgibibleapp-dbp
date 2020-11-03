@@ -58,7 +58,12 @@ class UserHighlightsTransformer extends BaseTransformer
      */
     public function transformForV4(Highlight $highlight)
     {
-        $this->checkColorPreference($highlight);
+        if ($highlight->color && is_object($highlight->color)) {
+            $this->checkColorPreference($highlight);
+        } else {
+            // set a default highlight
+            $highlight->color = 'green'; // V2 uses green
+        }
 
         if (!isset($highlight->book->name)) {
              // likely remote content set up
@@ -171,8 +176,13 @@ class UserHighlightsTransformer extends BaseTransformer
         ];
     }
 
+    // build higlight->color css attribute
     private function checkColorPreference($highlight)
     {
+        if (!$highlight->color) {
+            echo "transformer checkColorPreference no color found\n";
+            return;
+        }
         $color_preference = checkParam('prefer_color') ?? 'rgba';
         if ($color_preference === 'hex') {
             $highlight->color = '#' . $highlight->color->hex;

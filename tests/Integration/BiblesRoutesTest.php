@@ -429,4 +429,63 @@ class BiblesRoutesTest extends ApiV4Test
         $response = $this->withHeaders($this->params)->get($path);
         $response->assertSuccessful();
     }
+
+    /**
+     * @category V4_API
+     * @category Route Name: v4_bible.bibleVerses
+     * @category Route Path: https://api.dbp.test/bibles/X/verses?v=4&key={key}
+     * @see      \App\Http\Controllers\Bible\BiblesController::bibleVerses
+     * @group    BibleRoutes
+     * @group    V4
+     * @group    travis
+     * @test
+     */
+    public function bibleVerses()
+    {
+        $params = array_merge([ 'bible_id' => 'ENGESV' ], $this->params);
+        $path = route('v4_bible.bibleVerses', $params);
+        echo "\nTesting: $path";
+        $response = $this->withHeaders($this->params)->get($path);
+        $response->assertSuccessful();
+    }
+
+    /**
+     * @category V4_API
+     * @category Route Name: v4_bible.getFilesetVernacularMetaData
+     * @category Route Path: https://api.dbp.test/bibles/X/books/Y/testament/Z?v=4&key={key}
+     * @see      \App\Http\Controllers\Bible\BiblesController::bibleVerses
+     * @group    BibleRoutes
+     * @group    V4
+     * @group    travis
+     * @test
+     */
+    public function bibleGetFilesetVernacularMetaData()
+    {
+        $params = array_merge([ 'bible_id' => 'ENGESV', 'book_id' => 'GEN', 'testament' => 'NT' ], $this->params);
+        $path = route('v4_bible.bibleVerses', $params);
+        echo "\nTesting: $path";
+        $response = $this->withHeaders($this->params)->get($path);
+        $response->assertSuccessful();
+    }
+
+    /**
+     * @category V4_API
+     * @category Route Name: v4_bible.bookOrder
+     * @category Route Path: https://api.dbp.test/bibles/book/order?v=4&key={key}
+     * @see      \App\Http\Controllers\Bible\BiblesController::getBookOrder
+     * @group    BibleRoutes
+     * @group    V4
+     * @group    travis
+     * @test
+     */
+    public function bibleGetBookOrder()
+    {
+        $params = array_merge([ 'bible_id' => 'ENGESV', 'book_id' => 'GEN', 'testament' => 'NT' ], $this->params);
+        $path = route('v4_bible.bookOrder', $params);
+        echo "\nTesting: $path";
+        $response = $this->withHeaders($this->params)->get($path);
+        $response->assertSuccessful();
+    }
+
+
 }

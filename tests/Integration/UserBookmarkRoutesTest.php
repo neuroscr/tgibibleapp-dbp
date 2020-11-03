@@ -107,6 +107,7 @@ class UserBookmarkRoutesTest extends ApiV4Test
         // test query remote content
         $this->assertEquals(0, count($bookmarks));
     }
+
     /**
      * @category V4_API
      * @category Route Name: v4_bookmarks.store
@@ -152,4 +153,97 @@ class UserBookmarkRoutesTest extends ApiV4Test
         $response->assertSuccessful();
         $this->assertEquals('"bookmark successfully deleted"', $response->getContent());
     }
+
+    /**
+     * @category V4_API
+     * @category Route Name: v4_bookmarks.store
+     * @category Route Path: https://api.dbp.test/users/{user_id}/bookmarks?v=4&key={key}
+     * @see      \App\Http\Controllers\User\BookmarksController::index
+     * @group    V4
+     * @group    travis
+     * @test
+     */
+    public function bookmarksMissingBook()
+    {
+        // we have one key (test-key)
+        $key = Key::where('key', $this->key)->first();
+
+        $test_bookmark = [
+            'bible_id'      => 'ENGESV',
+            'user_id'       => $key->user_id,
+            'book_id'       => 'X',
+            'chapter'       => 1,
+            'verse_start'   => 10,
+        ];
+        $path = route('v4_bookmarks.store', Arr::add($this->params, 'user_id', $key->user_id));
+        echo "\nTesting: POST $path";
+        $response = $this->withHeaders($this->params)->post($path, $test_bookmark);
+        $result = json_decode($response->getContent().'', true);
+        $this->assertEquals(1, count($result)); // expecting 1 field...
+        $this->assertEquals(true, isset($result['error'])); // expecting error field
+        $this->assertEquals(true, isset($result['error']['message'])); // expecting error.message field
+        $this->assertEquals(422, isset($result['error']['status_code'])); // expecting error.status_code field
+    }
+
+    /**
+     * @category V4_API
+     * @category Route Name: v4_bookmarks.store
+     * @category Route Path: https://api.dbp.test/users/{user_id}/bookmarks?v=4&key={key}
+     * @see      \App\Http\Controllers\User\BookmarksController::index
+     * @group    V4
+     * @group    travis
+     * @test
+     */
+    public function bookmarksMissingBible()
+    {
+        // we have one key (test-key)
+        $key = Key::where('key', $this->key)->first();
+
+        $test_bookmark = [
+            'bible_id'      => 'X',
+            'user_id'       => $key->user_id,
+            'book_id'       => 'X',
+            'chapter'       => 1,
+            'verse_start'   => 10,
+        ];
+        $path = route('v4_bookmarks.store', Arr::add($this->params, 'user_id', $key->user_id));
+        echo "\nTesting: POST $path";
+        $response = $this->withHeaders($this->params)->post($path, $test_bookmark);
+        $result = json_decode($response->getContent().'', true);
+        $this->assertEquals(1, count($result)); // expecting 1 field...
+        $this->assertEquals(true, isset($result['error'])); // expecting error field
+        $this->assertEquals(true, isset($result['error']['message'])); // expecting error.message field
+        $this->assertEquals(422, isset($result['error']['status_code'])); // expecting error.status_code field
+    }
+
+    /**
+     * @category V4_API
+     * @category Route Name: v4_bookmarks.store
+     * @category Route Path: https://api.dbp.test/users/{user_id}/bookmarks?v=4&key={key}
+     * @see      \App\Http\Controllers\User\BookmarksController::index
+     * @group    V4
+     * @group    travis
+     * @test
+     */
+    public function bookmarksMissingBible2()
+    {
+        // we have one key (test-key)
+        $key = Key::where('key', $this->key)->first();
+
+        $test_bookmark = [
+            'bible_id'      => 'X',
+            'user_id'       => $key->user_id,
+            'chapter'       => 1,
+            'verse_start'   => 10,
+        ];
+        $path = route('v4_bookmarks.store', Arr::add($this->params, 'user_id', $key->user_id));
+        echo "\nTesting: POST $path";
+        $response = $this->withHeaders($this->params)->post($path, $test_bookmark);
+        $result = json_decode($response->getContent().'', true);
+        $this->assertEquals(1, count($result)); // expecting 1 field...
+        $this->assertEquals(true, isset($result['error'])); // expecting error field
+        $this->assertEquals(true, isset($result['error']['message'])); // expecting error.message field
+        $this->assertEquals(422, isset($result['error']['status_code'])); // expecting error.status_code field
+    }
+
 }

@@ -30,6 +30,31 @@ class UserHighlightTest extends ApiV4Test
 
     /**
      * @category V4_API
+     * @category Route Name: v4_highlights.colors
+     * @category Route Path: https://api.dbp.test/users/{user_id}/highlights?v=4&key={key}
+     * @see      \App\Http\Controllers\User\HighlightsController::index
+     * @group    V4
+     * @group    travis
+     * @test
+     */
+    public function highlightColors()
+    {
+        // hard coded for now
+        $params = array_merge([ 'api_token'=>'IRSooPKAWU5dUeEVw6W2rQy3o6ursYtbjMGSeLjljcDSUjopSbEXXIBweli7', 'user_id' => 1255627 ], $this->params);
+        $path = route('v4_highlights.colors', $params);
+        echo "\nTesting: $path";
+        $response = $this->withHeaders($this->params)->get($path);
+        // [{"id":1,"color":"green","hex":"addd79","red":173,"green":221,"blue":121,"opacity":0.7}]
+        $result = json_decode($response->getContent() . '', true);
+        $response->assertStatus(200);
+        $this->assertEquals(1, count($result)); // one row
+        $this->assertEquals(7, count($result[0])); // 7 fields
+        $this->assertEquals(1, $result[0]['id']); // first id
+    }
+
+
+    /**
+     * @category V4_API
      * @category Route Name: v4_highlights.index
      * @category Route Path: https://api.dbp.test/users/{user_id}/highlights?v=4&key={key}
      * @see      \App\Http\Controllers\User\HighlightsController::index
@@ -61,7 +86,6 @@ class UserHighlightTest extends ApiV4Test
         $path = route('v4_highlights.index', $params);
         echo "\nTesting: $path";
         $response = $this->withHeaders($this->params)->get($path);
-        echo $response->getContent();
         $response->assertStatus(200);
     }
 
@@ -155,6 +179,9 @@ class UserHighlightTest extends ApiV4Test
         echo "\nTesting: PUT $path";
         $response = $this->withHeaders($this->params)->put($path, ['highlighted_color' => '#ff1100']);
         $response->assertSuccessful();
+        $responseData = json_decode($response->getContent() . '', true);
+        $this->assertEquals(true, isset($responseData['data']));
+        $this->assertEquals('rgba(255,17,0,1)', $responseData['data']['highlighted_color']);
 
         // Highlight Destroy
         $path = route('v4_highlights.destroy', array_merge(['user_id' => $key->user_id,'highlight_id' => $test_highlight->id], $this->params));

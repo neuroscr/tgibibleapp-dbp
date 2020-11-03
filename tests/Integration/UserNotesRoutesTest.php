@@ -157,6 +157,9 @@ class UserNotesRoutesTest extends ApiV4Test
         echo "\nTesting: GET $path";
         $response = $this->withHeaders($this->params)->get($path);
         $response->assertSuccessful();
+        $result = json_decode($response->getContent() . '', true);
+        $this->assertEquals($test_created_note->id, $result['id']);
+        $this->assertEquals($test_created_note->notes, $result['notes']);
 
         $path = route('v4_notes.update', array_merge(['user_id' => $key->user_id,'note_id' => $test_created_note->id], $this->params));
         echo "\nTesting: PUT $path";
@@ -169,6 +172,8 @@ class UserNotesRoutesTest extends ApiV4Test
         echo "\nTesting: DELETE $path";
         $response = $this->withHeaders($this->params)->delete($path);
         $response->assertSuccessful();
+        $result = json_decode($response->getContent() . '', true);
+        $this->assertEquals('Note Deleted', $result['success']);
     }
 
     /**

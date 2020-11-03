@@ -23,37 +23,43 @@ class ContentServiceProvider extends ServiceProvider
                 $book_id = array_get($input, 'book_id');
                 $client = new Client();
                 if ($book_id) {
-                    // bible_id and book_id
-                    // validate bible or book exists
-                    try {
-                        $res = $client->get($content_config['url'] .
-                           'bibles/' . $value . '/book/'. $book_id .
-                           '?v=4&key=' . $content_config['key'],
-                           ['http_errors' => false]);
-                        $result = json_decode($res->getBody() . '', true);
-                        if (isset($result['error'])) {
-                            $valid = false;
-                        } else
-                        if (isset($result['data']) && !count($result['data'])) {
-                            // book missing
-                            $valid = false;
+                    // validate bible_id and book_id exists
+                    $result = cacheRemember('bibles_book_existence',
+                      [$value, $book_id], now()->addDay(), function ()
+                      use ($value, $book_id, $content_config, $client) {
+                        try {
+                            $res = $client->get($content_config['url'] .
+                               'bibles/' . $value . '/book/'. $book_id .
+                               '?v=4&key=' . $content_config['key'],
+                               ['http_errors' => false]);
+                            return json_decode($res->getBody() . '', true);
+                        } catch (\GuzzleHttp\Exception\RequestException $e) {
+                            return array('error' => 'request exception');
                         }
-                    } catch (\GuzzleHttp\Exception\RequestException $e) {
+                    });
+                    if (isset($result['error'])) {
+                        $valid = false;
+                    } else
+                    if (isset($result['data']) && !count($result['data'])) {
+                        // book missing
                         $valid = false;
                     }
                 } else {
-                    // bible_id book only
-                    try {
-                        $res = $client->get($content_config['url'] . 'bibles/' . $value .
-                           '/name/'. $GLOBALS['i18n_id'] . '?v=4&key=' . $content_config['key'],
-                           ['http_errors' => false]);
-                        $result = json_decode($res->getBody() . '', true);
-                        if (isset($result['error'])) {
-                            // bible missing
-                            $valid = false;
-                            $validator->errors()->add('bible_id', 'bible_id must exist!');
+                    // validate (only) bible_id exists
+                    $result = cacheRemember('bibles_existence', [$value],
+                      now()->addDay(), function ()
+                      use ($value, $content_config, $client) {
+                        try {
+                            $res = $client->get($content_config['url'] . 'bibles/' . $value .
+                               '/name/'. $GLOBALS['i18n_id'] . '?v=4&key=' . $content_config['key'],
+                               ['http_errors' => false]);
+                            return json_decode($res->getBody() . '', true);
+                        } catch (\GuzzleHttp\Exception\RequestException $e) {
+                            return array('error' => 'request exception');
                         }
-                    } catch (\GuzzleHttp\Exception\RequestException $e) {
+                    });
+                    if (isset($result['error'])) {
+                        // bible missing
                         $valid = false;
                     }
                 }

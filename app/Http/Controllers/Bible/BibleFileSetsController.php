@@ -143,7 +143,7 @@ class BibleFileSetsController extends APIController
         // return text_plain for this bible including hash_id
         return $this->reply($text_fileset_copy, [], '');
     }
-  
+
     public function getPlaylistMeta($id = null, $asset_id = null, $set_type_code = null, $cache_key = 'bible_filesets_show2')
     {
         // laravel pass array from route to controller
@@ -185,6 +185,100 @@ class BibleFileSetsController extends APIController
             $fileset_text_info[$fileset] = $text_filesets[$bible_id];
         }
         return $this->reply($fileset_text_info, [], '');
+    }
+
+    public function showAudio($id = null)
+    {
+        // laravel pass array from route to controller
+        // https://stackoverflow.com/a/47695952/287696
+        $filesets = explode(',', checkParam('fileset_id', true, $id));
+
+        // lookup filesets and get hashes
+        $filesets_hashes = DB::connection('dbp')
+            ->table('bible_filesets')
+            ->select(['id', 'hash_id', 'set_type_code'])
+            ->whereIn('id', $filesets)->get();
+
+        return $this->reply($filesets_hashes, [], '');
+    }
+
+
+    private function processHLSAudio($bible_files)
+    {
+        $hls_items = [];
+        foreach ($bible_files as $bible_file) {
+            $currentBandwidth = $bible_file->streamBandwidth->first();
+            $transportStream = sizeof($currentBandwidth->transportStreamBytes) ? $currentBandwidth->transportStreamBytes : $currentBandwidth->transportStreamTS;
+            // create temporary fileset holder
+            $fileset = $bible_file->fileset;
+            $hls_item = array(
+                'type'          => 'hls',
+                'chapter_start' => $bible_file->chapter_start,
+                'chapter_end'   => $bible_file->chapter_end,
+                'subitems'      => array(),
+            );
+            foreach ($transportStream as $stream_position => $stream) {
+                $hls_subitem = array(
+                    'duration'      => $stream->runtime,
+                    'position'      => $stream_position,
+                );
+                if (isset($stream->timestamp)) {
+                    $hls_subitem['bytes']  = $stream->bytes;
+                    $hls_subitem['offset'] = $stream->offset;
+                    // change fileset (id, asset_id) moving forward...
+                    $fileset = $stream->timestamp->bibleFile->fileset;
+                    // stomp stream->file_name
+                    $stream->file_name = $stream->timestamp->bibleFile->file_name;
+                }
+                $hls_subitem['fileset_id'] = $fileset->id;
+                $hls_subitem['asset_id'] = $fileset->asset_id;
+                $hls_subitem['file_name'] = $stream->file_name;
+                $hls_subitem['path'] = $bible_file->fileset->bible->first()->id;
+                $hls_item['subitems'][] = $hls_subitem;
+            }
+            $hls_items[] = $hls_item;
+        }
+        return $hls_items;
+    }
+
+    private function processMp3Audio($bible_files)
+    {
+        $hls_items   = [];
+        foreach ($bible_files as $bible_file) {
+            $fileset          = $bible_file->fileset;
+            $hls_items[]      = array(
+                'type'          => 'mp3',
+                'chapter_start' => $bible_file->chapter_start,
+                'chapter_end'   => $bible_file->chapter__end,
+                'duration'      => $bible_file->duration ?? 180,
+                'fileset_id'    => $fileset->id,
+                'asset_id'      => $fileset->asset_id,
+                'path'          => $fileset->bible->first()->id,
+                'file_name'     => $bible_file->file_name,
+            );
+        }
+        return $hls_items;
+    }
+
+    public function showStream($fileset_id = null, $book_id = null)
+    {
+        $fileset = BibleFileset::where('id', $fileset_id)->first();
+        if (!$fileset) {
+            return $this->setStatusCode(404)->replyWithError(trans('api.bible_fileset_errors_404'));
+        }
+
+        // we need book_id to narrow down the transport streams
+        $bible_files = BibleFile::with('streamBandwidth.transportStreamTS')->with('streamBandwidth.transportStreamBytes')->where([
+            'hash_id' => $fileset->hash_id,
+            'book_id' => $book_id,
+        ])
+            ->get();
+        if ($fileset->set_type_code === 'audio_stream' || $fileset->set_type_code === 'audio_drama_stream') {
+            $hls_items = $this->processHLSAudio($bible_files, $fileset_id);
+        } else {
+            $hls_items = $this->processMp3Audio($bible_files, $fileset_id);
+        }
+        return $this->reply($hls_items);
     }
 
     private function signedPath($bible, $fileset, $fileset_chapter)

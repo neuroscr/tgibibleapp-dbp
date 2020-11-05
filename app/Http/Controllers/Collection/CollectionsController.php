@@ -178,6 +178,7 @@ class CollectionsController extends APIController
             'order_column'          => $order_column,
             'name'                  => $name,
             'featured'              => false,
+            // thumbnail_url is not fillable by user...
         ]);
 
         return $this->reply($collection);

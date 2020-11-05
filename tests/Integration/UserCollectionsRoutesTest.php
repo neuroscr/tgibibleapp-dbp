@@ -57,6 +57,7 @@ class UserCollectionsRoutesTest extends ApiV4Test
         $this->assertSame($new_collection['language_id'], $new_created_collection->language_id);
         $this->assertSame($new_collection['order_column'], $new_created_collection->order_column);
         //$this->assertSame($new_collection['user_id'], $new_created_collection->user_id);
+        // this won't return thumbnail_url
     }
 
     /**
@@ -80,6 +81,9 @@ class UserCollectionsRoutesTest extends ApiV4Test
         echo "\nTesting: PUT $path";
         $response = $this->withHeaders($this->params)->put($path, ['name' => 'A collection updated by Feature tests']);
         $response->assertSuccessful();
+        $collection = json_decode($response->getContent(), true);
+        $this->assertSame('A collection updated by Feature tests', $collection['name']);
+        $this->assertSame(null, $collection['thumbnail_url']);
     }
 
     /**
@@ -100,6 +104,9 @@ class UserCollectionsRoutesTest extends ApiV4Test
         $response = $this->withHeaders($this->params)->get($path);
         $result = collect(json_decode($response->getContent()));
         $response->assertSuccessful();
+        $collection = json_decode($response->getContent(), true);
+        // zero collections
+        $this->assertEquals(0, count($collection['data']));
     }
 
     /**
@@ -114,14 +121,18 @@ class UserCollectionsRoutesTest extends ApiV4Test
      */
     public function collectionsShow()
     {
+        global $new_created_collection;
         // 1255627 could be any user...
         // insert into collections (name, user_id, language_id, order_column) values ('my collection', 1255627, 1, 1);
-        $params = array_merge(['id' => 1], $this->params);
+        $params = array_merge(['id' => $new_created_collection->id], $this->params);
         $path = route('v4_collections.show', $params);
         echo "\nTesting: $path";
 
         $response = $this->withHeaders($this->params)->get($path);
         $response->assertSuccessful();
+        $collection = json_decode($response->getContent(), true);
+        $this->assertSame('A collection updated by Feature tests', $collection['name']);
+        $this->assertSame(null, $collection['thumbnail_url']);
     }
 
     /**

@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers\Bible;
 
+use App\Http\Controllers\APIController;
 use App\Models\Bible\BibleVerse;
 use App\Models\Bible\Book;
 use App\Models\Bible\BibleFileset;
 use App\Transformers\BooksTransformer;
-use App\Http\Controllers\APIController;
+use App\Models\Bible\Bible;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class BooksController extends APIController
 {
@@ -45,6 +47,21 @@ class BooksController extends APIController
             return fractal($books, new BooksTransformer(), $this->serializer);
         });
         return $this->reply($books);
+    }
+
+    public function getBookOrder()
+    {
+        $book_order_query = cacheRemember('book_order_columns', [], now()->addDay(), function () {
+            // get the dbp.books order
+            $query = collect(Schema::connection('dbp')->getColumnListing('books'))->filter(function ($column) {
+                return strpos($column, '_order') !== false;
+            })->map(function ($column) {
+                return str_replace('_order', '', $column);
+                //return "IF(bibles.versification = '" . $name . "', books." . $name . '_order, 0)';
+            })->toArray();
+            return array_values($query);
+        });
+        return $this->reply($book_order_query);
     }
 
     /**

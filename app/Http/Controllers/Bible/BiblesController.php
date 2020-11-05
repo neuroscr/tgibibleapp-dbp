@@ -277,9 +277,6 @@ class BiblesController extends APIController
 
     public function showName($id, $language)
     {
-        $access_control = $this->accessControl($this->key);
-        $cache_params = [$id, $access_control->string];
-
         $bible = Bible::whereId($id)->with(['translations'])->first();
         if (!$bible) {
             return $this->setStatusCode(404)->replyWithError(trans('api.bibles_errors_404', ['bible_id' => $id]));
@@ -315,7 +312,7 @@ class BiblesController extends APIController
 
     public function BibleVerses($bible_id)
     {
-        // 3-31k
+        // This query plan was based on the following query having 3-31k records
         $q = Bible::where('bibles.id', '=', $bible_id)
           ->join('bible_books', 'bible_books.bible_id', 'bibles.id')
           ->leftjoin('books', 'books.id', 'bible_books.book_id')
@@ -331,7 +328,6 @@ class BiblesController extends APIController
           ->select(['bibles.versification', 'bible_books.book_id',
             'chapter', 'verse_start', 'verse_end', 'verse_text', 'books.book_testament',
             'bible_books.name']);
-        //echo $q->toSql();
         $bible = Bible::where('id', $bible_id)->first();
         $biblebooks = $bible->books()->get();
         $testament_audiosets = array();
@@ -364,7 +360,6 @@ class BiblesController extends APIController
         $compressed = array();
         $books = array();
         foreach($q->get() as $row) {
-          // {"book_id":"ROM","chapter":1,"verse_start":1,"verse_end":1,"verse_text":"Adam, Seth, Enosh;"}
           $book_key = $row->book_id . '_'. $row->book_testament . '_'. $row->name;
           if (!isset($books[$book_key])) {
             $books[$book_key] = array(
@@ -1056,8 +1051,7 @@ class BiblesController extends APIController
     // is this a good name for this?
     public function getFilesetVernacularMetaData($bible_id, $book_id, $testament) {
         // testament is a set_size_code
-        // we need to lookup by book_id to get this
-        //$testament = $this->book->book->book_testament;
+        // we maybe able to get testament via book_id
 
         $bible = Bible::where('id', $bible_id)->first();
         $filesets = $bible->filesets;
@@ -1079,26 +1073,6 @@ class BiblesController extends APIController
         })->toArray();
 
         return $this->reply(collect(['text_fileset' => $text_fileset, 'audio_filesets' => array_values($available_filesets)]));
-
-        /*
-        // get verses if there's a text_fileset
-        $verses = '';
-        if ($text_fileset) {
-            $verses = BibleVerse::withVernacularMetaData($bible)
-                ->where('hash_id', $text_fileset->hash_id)
-                ->where('bible_verses.book_id', $book_id)
-                ->where('verse_start', '>=', $verse_start)
-                ->where('verse_end', '<=', $verse_end)
-                ->where('chapter', $chapter)
-                ->orderBy('verse_start')
-                ->select([
-                    'bible_verses.verse_text',
-                ])->get()->pluck('verse_text');
-            $verse_text = implode(' ', $verses->toArray());
-        }
-
-        return $this->reply(collect(['verse_text' => $verse_text, 'audio_filesets' => array_values($available_filesets)]));
-        */
     }
 
     public function getAudio($bible_id) {

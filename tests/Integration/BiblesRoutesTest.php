@@ -35,6 +35,48 @@ class BiblesRoutesTest extends ApiV4Test
 
     /**
      * @category V4_API
+     * @category Route Name: v4_filesets.showAudio
+     * @category Route Path: https://api.dbp.test/bibles/filesets/media/types?v=4&key={key}
+     * @see      \App\Http\Controllers\Bible\BibleFileSetsController::mediaTypes
+     * @group    BibleRoutes
+     * @group    V4
+     * @group    travis
+     * @test
+     */
+    public function showAudio()
+    {
+        $params = array_merge(['fileset_id' => 'UBUANDP2DA'], $this->params);
+        $path = route('v4_filesets.showAudio', $params);
+        echo "\nTesting: GET $path";
+
+        $response = $this->withHeaders($this->params)->get($path);
+        $response->assertSuccessful();
+    }
+
+    /**
+     * @category V4_API
+     * @category Route Name: v4_filesets.showStream
+     * @category Route Path: https://api.dbp.test/bibles/filesets/media/types?v=4&key={key}
+     * @see      \App\Http\Controllers\Bible\BibleFileSetsController::mediaTypes
+     * @group    BibleRoutes
+     * @group    V4
+     * @group    travis
+     * @test
+     */
+    public function showStream()
+    {
+        $params = array_merge(['fileset_id' => 'ENGESV', 'book_id' => 'GEN'], $this->params);
+        $path = route('v4_filesets.showStream', $params);
+        echo "\nTesting: GET $path";
+
+        $response = $this->withHeaders($this->params)->get($path);
+        $response->assertSuccessful();
+        $result = json_decode($response->getContent().'',  true);
+        $this->assertEquals(50, count($result));
+    }
+
+    /**
+     * @category V4_API
      * @category Route Name: v4_filesets.podcast
      * @category Route Path: https://api.dbp.test/bibles/filesets/{fileset_id}/podcast?v=4&key={key}
      * @see      \App\Http\Controllers\Bible\BibleFilesetsPodcastController::index

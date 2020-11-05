@@ -47,6 +47,8 @@ Route::name('v4_internal_filesets.update')->put('bibles/filesets/{fileset_id}', 
 Route::name('v4_internal_filesets.store')->post('bibles/filesets',             'User\Dashboard\BibleFilesetsManagementController@store');
 Route::name('v4_filesets.showFeatured')->get('bibles/filesets/{fileset_id}/verses',              'Bible\BibleFileSetsController@showFeatured');
 Route::name('v4_filesets.showMultiple')->get('bibles/filesets/{fileset_id?}/playlist',              'Bible\BibleFileSetsController@getPlaylistMeta');
+Route::name('v4_filesets.showAudio')->get('bibles/filesets/{fileset_id?}/audio',              'Bible\BibleFileSetsController@showAudio');
+Route::name('v4_filesets.showStream')->get('bibles/filesets/{fileset_id?}/stream/{book_id?}',          'Bible\BibleFileSetsController@showStream');
 Route::name('v4_filesets.books')->get('bibles/filesets/{fileset_id}/books',        'Bible\BooksController@show');
 
 // VERSION 4 | Text

@@ -16,14 +16,18 @@ Route::name('v4_media_stream_ts')->get('bible/filesets/{fileset_id}/{book_id}-{c
 
 // VERSION 4 | Bible
 Route::name('v4_bible.books')->get('bibles/{bible_id}/book/{book?}',               'Bible\BiblesController@books');
+Route::name('v4_bible.bookSearch')->get('bibles/book/search/{query?}',                  'Bible\BiblesController@bookSearch');
+Route::name('v4_bible.bookVerse')->get('bibles/{bible_id}/book/{book_id?}/{chapter?}/{verse_start?}',           'Bible\BiblesController@bookVerse');
 Route::name('v4_bible_equivalents.all')->get('bible/equivalents',                  'Bible\BibleEquivalentsController@index');
 Route::name('v4_bible.links')->get('bibles/links',                                 'Bible\BibleLinksController@index');
 Route::name('v4_bible_books_all')->get('bibles/books/',                            'Bible\BooksController@index');
 Route::name('v4_bible.one')->get('bibles/{bible_id}',                              'Bible\BiblesController@show');
+Route::name('v4_bible.oneName')->get('bibles/{bible_id}/name/{language}',           'Bible\BiblesController@showName');
 Route::name('v4_bible.all')->get('bibles',                                         'Bible\BiblesController@index');
 Route::name('v4_bible.defaults')->get('bibles/defaults/types',                     'Bible\BiblesController@defaults');
 Route::name('v4_bible.copyright')->get('bibles/{bible_id}/copyright',              'Bible\BiblesController@copyright');
 Route::name('v4_bible.getAudio')->get('bibles/{bible_id?}/audio',                  'Bible\BiblesController@getAudio');
+
 Route::name('v4_bible.chapter')
     ->middleware('APIToken')->get('bibles/{bible_id}/chapter',                     'Bible\BiblesController@chapter');
 Route::name('v4_bible.chapter.annotations')
@@ -226,3 +230,25 @@ Route::name('v4_push_tokens.store')
     ->middleware('APIToken:check')->post('push_notifications',                      'User\PushTokensController@store');
 Route::name('v4_push_tokens.destroy')
     ->middleware('APIToken:check')->delete('push_notifications/{token}',            'User\PushTokensController@destroy');
+
+
+// VERSION 4 | Collections
+Route::name('v4_collections.index')
+    ->middleware('APIToken')->get('collections',                                          'Collection\CollectionsController@index');
+Route::name('v4_collections.store')
+    ->middleware('APIToken:check')->post('collections',                                   'Collection\CollectionsController@store');
+Route::name('v4_collections.show')
+    ->middleware('APIToken')->get('collections/{collection_id}',                                'Collection\CollectionsController@show');
+Route::name('v4_collections.playlists')
+    ->middleware('APIToken')->get('collections/{collection_id}/playlists',                                'Collection\CollectionsController@getPlaylists');
+Route::name('v4_collections.update')
+    ->middleware('APIToken:check')->put('collections/{collection_id}',                          'Collection\CollectionsController@update');
+Route::name('v4_collections.destroy')
+    ->middleware('APIToken:check')->delete('collections/{collection_id}',                       'Collection\CollectionsController@destroy');
+
+Route::name('v4_collection_playlists.store')
+    ->middleware('APIToken:check')->post('collections/{collection_id}/playlists',               'Collection\CollectionsController@storePlaylist');
+Route::name('v4_collection_playlists.update')
+    ->middleware('APIToken:check')->post('collections/{collection_id}/playlists/{playlist_id}',             'Collection\CollectionsController@updatePlaylist');
+Route::name('v4_collection_playlists.destroy')
+    ->middleware('APIToken:check')->delete('collections/{collection_id}/playlists/{playlist_id}',             'Collection\CollectionsController@destroyPlaylist');

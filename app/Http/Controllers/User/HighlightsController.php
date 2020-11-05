@@ -12,6 +12,7 @@ use App\Traits\CheckProjectMembership;
 use League\Fractal\Pagination\IlluminatePaginatorAdapter;
 use Illuminate\Support\Facades\DB;
 use Validator;
+use App\Services\ContentServiceProvider;
 use GuzzleHttp\Client;
 
 use Illuminate\Http\Request;
@@ -340,7 +341,7 @@ class HighlightsController extends APIController
                     $book_data = $bible_book_verses_map[$hl->book_id];
                     $testament = $book_data['testament'];
                     $book_name = $book_data['name'];
-                    $filtered = collect($book_data['verses'])->filter(function($arr) use ($hl, $chapter_id, $query) {
+                    $filtered = collect($book_data['verses'])->filter(function($arr) use ($hl, $chapter_id, $book_name, $query) {
                         // join
                         $inChapter  = $arr[0] == $hl->chapter;     if (!$inChapter) return false;
                         $afterStart = $arr[1] >= $hl->verse_start; if (!$afterStart) return false;
@@ -649,11 +650,11 @@ class HighlightsController extends APIController
 
     private function validateHighlight()
     {
+        $content_config = config('services.content');
         $validator = Validator::make(request()->all(), [
-            // FIXME:
-            //'bible_id'          => ((request()->method() === 'POST') ? 'required|' : '') . 'exists:dbp.bibles,id',
+            'bible_id'          => ((request()->method() === 'POST') ? 'required|' : '') . (empty($content_config['url']) ? 'exists:dbp.bibles,id' : 'remote_biblebook_checker'),
             'user_id'           => ((request()->method() === 'POST') ? 'required|' : '') . 'exists:dbp_users.users,id',
-            //'book_id'           => ((request()->method() === 'POST') ? 'required|' : '') . 'exists:dbp.books,id',
+            'book_id'           => ((request()->method() === 'POST') ? 'required|' : '') . (empty($content_config['url']) ? 'exists:dbp.books,id' : ''),
             'chapter'           => ((request()->method() === 'POST') ? 'required|' : '') . 'max:150|min:1|integer',
             'verse_start'       => ((request()->method() === 'POST') ? 'required|' : '') . 'max:177|min:1|integer',
             'verse_end'         => ((request()->method() === 'POST') ? 'required|' : '') . 'max:177|min:1|integer',

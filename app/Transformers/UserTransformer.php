@@ -61,7 +61,7 @@ class UserTransformer extends BaseTransformer
                     'accounts'  => $user->accounts,
                     'keys'      => $user->keys,
                     'api_token' => $user->api_token,
-                    'freshchat_restore_id' => $user ->freshchat_restore_id
+                    'freshchat_restore_id' => $user ->freshchat_restore_id,
                 ];
 
             /**
@@ -94,7 +94,7 @@ class UserTransformer extends BaseTransformer
                     'profile'   => $user->profile,
                     'organizations' => $user->organizations,
                     'accounts'  => $user->accounts,
-                    'freshchat_restore_id' => $user ->freshchat_restore_id
+                    'freshchat_restore_id' => $user ->freshchat_restore_id,
                 ];
         }
     }

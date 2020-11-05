@@ -9,6 +9,7 @@ use App\Traits\CheckProjectMembership;
 use App\Transformers\UserBookmarksTransformer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use App\Services\ContentServiceProvider;
 use League\Fractal\Pagination\IlluminatePaginatorAdapter;
 use App\Traits\AnnotationTags;
 use GuzzleHttp\Client;
@@ -184,8 +185,19 @@ class BookmarksController extends APIController
             return $this->setStatusCode(401)->replyWithError(trans('api.projects_users_not_connected'));
         }
 
-        $book = Book::where('id', $request->book_id)->first();
-        $request['book_id'] = $book->id;
+        // we don't need to do a book_id existence check here because validateBookmark will
+        /*
+        $content_config = config('services.content');
+        if (empty($content_config['url'])) {
+            $book = Book::where('id', $request->book_id)->first();
+            if (!$book) {
+                return $this->setStatusCode(404)->replyWithError('Book not found');
+            }
+            $request['book_id'] = $book->id;
+        } else {
+            // FIXME: write me!
+        }
+        */
         $request['bible_id'] = $request->dam_id ?? $request->bible_id;
 
         $invalidBookmark = $this->validateBookmark();
@@ -308,10 +320,11 @@ class BookmarksController extends APIController
 
     private function validateBookmark()
     {
-        $checks = [
-            //'bible_id'    => ((request()->method() === 'POST') ? 'required|' : '') . 'exists:dbp.bibles,id',
+        $content_config = config('services.content');
+        $validator = Validator::make(request()->all(), [
+            'bible_id'    => ((request()->method() === 'POST') ? 'required|' : '') . (empty($content_config['url']) ? 'exists:dbp.bibles,id' : 'remote_biblebook_checker'),
             'user_id'     => ((request()->method() === 'POST') ? 'required|' : '') . 'exists:dbp_users.users,id',
-            //'book_id'     => ((request()->method() === 'POST') ? 'required|' : '') . 'exists:dbp.books,id',
+            'book_id'     => ((request()->method() === 'POST') ? 'required|' : '') . (empty($content_config['url']) ? 'exists:dbp.books,id' : ''),
             'chapter'     => ((request()->method() === 'POST') ? 'required|' : '') . 'max:150|min:1|integer',
             'verse_start' => ((request()->method() === 'POST') ? 'required|' : '') . 'max:177|min:1|integer'
         ];

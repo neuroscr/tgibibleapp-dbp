@@ -8,6 +8,7 @@ use App\Transformers\UserNotesTransformer;
 use Illuminate\Http\Request;
 use League\Fractal\Pagination\IlluminatePaginatorAdapter;
 use Validator;
+use App\Services\ContentServiceProvider;
 use App\Traits\CheckProjectMembership;
 use App\Traits\AnnotationTags;
 use GuzzleHttp\Client;
@@ -351,14 +352,16 @@ class NotesController extends APIController
 
     private function invalidNote($request)
     {
+        $content_config = config('services.content');
         $validator = Validator::make($request->all(), [
-            'bible_id'    => (($request->method === 'POST') ? 'required|' : '') . 'exists:dbp.bibles,id',
             'user_id'     => (($request->method === 'POST') ? 'required|' : '') . 'exists:dbp_users.users,id',
-            'book_id'     => (($request->method === 'POST') ? 'required|' : '') . 'exists:dbp.books,id',
             'chapter'     => (($request->method === 'POST') ? 'required|' : '') . 'max:150|min:1',
             'verse_start' => (($request->method === 'POST') ? 'required|' : '') . 'max:177|min:1',
             'notes'       => (($request->method === 'POST') ? 'required|' : '') . '',
+            'bible_id'    => (($request->method === 'POST') ? 'required|' : '') . (empty($content_config['url']) ? 'exists:dbp.bibles,id' : 'remote_biblebook_checker'),
+            'book_id'     => (($request->method === 'POST') ? 'required|' : '') . (empty($content_config['url']) ? 'exists:dbp.books,id' : '')
         ]);
+
         if ($validator->fails()) {
             return ['errors' => $validator->errors()];
         }

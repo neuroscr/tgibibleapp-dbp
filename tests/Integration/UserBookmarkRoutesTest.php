@@ -108,7 +108,7 @@ class UserBookmarkRoutesTest extends ApiV4Test
         $this->assertEquals(0, count($bookmarks));
     }
 
-    /**
+   /**
      * @category V4_API
      * @category Route Name: v4_bookmarks.store
      * @category Route Path: https://api.dbp.test/users/{user_id}/bookmarks?v=4&key={key}

@@ -327,7 +327,21 @@ class BookmarksController extends APIController
             'book_id'     => ((request()->method() === 'POST') ? 'required|' : '') . (empty($content_config['url']) ? 'exists:dbp.books,id' : ''),
             'chapter'     => ((request()->method() === 'POST') ? 'required|' : '') . 'max:150|min:1|integer',
             'verse_start' => ((request()->method() === 'POST') ? 'required|' : '') . 'max:177|min:1|integer'
-        ]);
+        ];
+        $content_config = config('services.content');
+        $errors = array();
+        if (empty($content_config['url'])) {
+            $checks['bible_id'] = ((request()->method === 'POST') ? 'required|' : '') . 'exists:dbp.bibles,id';
+            $checks['book_id']  = ((request()->method === 'POST') ? 'required|' : '') . 'exists:dbp.books,id';
+        } else {
+            $checks['bible_id'] = ((request()->method === 'POST') ? 'required|' : '');
+            $checks['book_id']  = ((request()->method === 'POST') ? 'required|' : '');
+            if (request()->method === 'POST') {
+                // FIXME
+                print_r(request()->all());
+            }
+        }
+        $validator = Validator::make(request()->all(), $checks);
         if ($validator->fails()) {
             return ['errors' => $validator->errors()];
         }

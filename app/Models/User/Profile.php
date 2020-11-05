@@ -53,6 +53,9 @@ class Profile extends Model
         'phone',
         'birthday',
         'sex',
+        'decision_name',
+        'decision_date',
+        'decision_want_resources',
         'created_at',
         'updated_at',
     ];
@@ -153,6 +156,43 @@ class Profile extends Model
      * @property string $zip
      */
     protected $zip;
+
+    /**
+     *
+     * @OA\Property(
+     *   title="decision_name",
+     *   description="Name of person making the decision",
+     *   type="string"
+     * )
+     *
+     * @property string $decision_name
+     */
+    protected $decision_name;
+
+    /**
+     *
+     * @OA\Property(
+     *   title="decision_date",
+     *   description="Date in the format of mm/dd/YYYY of when the decision was made",
+     *   type="string"
+     * )
+     *
+     * @property string $decision_date
+     */
+    protected $decision_date;
+
+    /**
+     *
+     * @OA\Property(
+     *   title="decision_want_resources",
+     *   description="Do they want additional resources regarding the decision",
+     *   type="string"
+     * )
+     *
+     * @property string $decision_want_resources
+     */
+    protected $decision_want_resources;
+
 
     /**
      *

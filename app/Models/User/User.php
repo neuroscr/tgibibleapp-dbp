@@ -168,7 +168,6 @@ class User extends Authenticatable
      */
     protected $email_token;
 
-
     protected $updated_at;
     protected $created_at;
     protected $deleted_at;

@@ -10,6 +10,7 @@ use App\Models\User\User;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Crypt;
+use GuzzleHttp\Client;
 
 /**
  * App\Models\User\Note
@@ -191,10 +192,13 @@ class Note extends Model
 
     public function book()
     {
-        return $this->hasOne(BibleBook::class, 'book_id', 'book_id')->where(
-      'bible_id',
-      $this['bible_id']
-    );
+        $content_config = config('services.content');
+        if (empty($content_config['url'])) {
+            return $this->hasOne(BibleBook::class, 'book_id', 'book_id')->where(
+              'bible_id',
+              $this['bible_id']
+            );
+        }
     }
 
     /**
@@ -207,32 +211,51 @@ class Note extends Model
      */
     public function getVerseTextAttribute()
     {
-        $chapter = $this['chapter'];
-        $verse_start = $this['verse_start'];
-        $verse_end = $this['verse_end'] ? $this['verse_end'] : $verse_start;
-        $bible = Bible::where('id', $this['bible_id'])->first();
-        $fileset = BibleFileset::join(
-      'bible_fileset_connections as connection',
-      'connection.hash_id',
-      'bible_filesets.hash_id'
-    )
-      ->where('bible_filesets.set_type_code', 'text_plain')
-      ->where('connection.bible_id', $bible->id)
-      ->first();
-        if (!$fileset) {
-            return '';
+        $content_config = config('services.content');
+        if (empty($content_config['url'])) {
+            $chapter = $this['chapter'];
+            $verse_start = $this['verse_start'];
+            $verse_end = $this['verse_end'] ? $this['verse_end'] : $verse_start;
+            $bible = Bible::where('id', $this['bible_id'])->first();
+            $fileset = BibleFileset::join(
+              'bible_fileset_connections as connection',
+              'connection.hash_id',
+              'bible_filesets.hash_id'
+            )
+                ->where('bible_filesets.set_type_code', 'text_plain')
+                ->where('connection.bible_id', $bible->id)
+                ->first();
+                  if (!$fileset) {
+                      return '';
+                  }
+                  $verses = BibleVerse::withVernacularMetaData($bible)
+                ->where('hash_id', $fileset->hash_id)
+                ->where('bible_verses.book_id', $this['book_id'])
+                ->where('verse_start', '>=', $verse_start)
+                ->where('verse_end', '<=', $verse_end)
+                ->where('chapter', $chapter)
+                ->orderBy('verse_start')
+                ->select(['bible_verses.verse_text'])
+                ->get()
+                ->pluck('verse_text');
+            return implode(' ', $verses->toArray());
+        } else {
+            $bible_id = $this['bible_id'];
+            $book_id = $this['book_id'];
+            $chapter = $this['chapter'];
+            $verse_start = $this['verse_start'];
+
+            $verse_data = cacheRemember('book_verse_text_data', [
+              $bible_id, $book_id, $chapter, $verse_start], now()->addDay(), function () use ($bible_id, $book_id, $chapter, $verse_start, $content_config) {
+                $client = new Client();
+                $res = $client->get($content_config['url'] . 'bibles/' .
+                   $bible_id . '/book/' . $book_id . '/' .
+                   $chapter . '/' . $verse_start .
+                   '?v=4&key=' . $content_config['key']);
+                return trim($res->getBody() . '', '"');
+            });
+            return $verse_data;
         }
-        $verses = BibleVerse::withVernacularMetaData($bible)
-      ->where('hash_id', $fileset->hash_id)
-      ->where('bible_verses.book_id', $this['book_id'])
-      ->where('verse_start', '>=', $verse_start)
-      ->where('verse_end', '<=', $verse_end)
-      ->where('chapter', $chapter)
-      ->orderBy('verse_start')
-      ->select(['bible_verses.verse_text'])
-      ->get()
-      ->pluck('verse_text');
-        return implode(' ', $verses->toArray());
     }
 
     /**
@@ -245,9 +268,21 @@ class Note extends Model
      */
     public function getBibleNameAttribute()
     {
-        $bible = Bible::whereId($this['bible_id'])->with(['translations', 'books.book'])->first();
-        $ctitle = optional($bible->translations->where('language_id', $GLOBALS['i18n_id'])->first())->name;
-        $vtitle = optional($bible->vernacularTranslation)->name;
-        return ($vtitle ? $vtitle : $ctitle);
+        $content_config = config('services.content');
+        if (empty($content_config['url'])) {
+            $bible = Bible::whereId($this['bible_id'])->with(['translations', 'books.book'])->first();
+            $ctitle = optional($bible->translations->where('language_id', $GLOBALS['i18n_id'])->first())->name;
+            $vtitle = optional($bible->vernacularTranslation)->name;
+            return ($vtitle ? $vtitle : $ctitle);
+        } else {
+            $bible_id = $this['bible_id'];
+            $bible_name = cacheRemember('bible_name', [$bible_id, $GLOBALS['i18n_id']], now()->addDay(), function () use ($bible_id, $content_config) {
+                $client = new Client();
+                $res = $client->get($content_config['url'] . 'bibles/' . $bible_id
+                  . '/name/' . $GLOBALS['i18n_id'] . '?v=4&key=' . $content_config['key']);
+                return trim($res->getBody().'', '"');
+            });
+            return $bible_name;
+        }
     }
 }

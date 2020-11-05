@@ -259,6 +259,7 @@ class BiblesRoutesTest extends ApiV4Test
      */
     public function bibleGetAudio()
     {
+        //$this->markTestIncomplete('audio count can change...');
         // keeping this, because we'll utilitze when we can unhard-code
         //$access_control = $this->accessControl($this->key);
         //$file = BibleFile::with('fileset')->whereIn('hash_id', $access_control->hashes)->inRandomOrder()->first();
@@ -541,6 +542,26 @@ class BiblesRoutesTest extends ApiV4Test
 
     /**
      * @category V4_API
+     * @category Route Name: v4_bible.chapter.annotations
+     * @category Route Path: https://api.dbp.test/bibles/BIBLE_ID/chapter/annotations?v=4&key={key}
+     * @see      \App\Http\Controllers\Bible\BiblesController::annotations
+     * @group    BibleRoutes
+     * @group    V4
+     * @group    travis
+     * @test
+     */
+    public function bibleAnnotations()
+    {
+        $params = array_merge([
+          'bible_id' => 'ENGESV',
+          'key' => 'Fiv9LrnDNlT1WjHaCktVqTnn',
+          // update user_api_tokens set api_token = '456542f8a59eac51e895c5ff9f388dc93fa0f0f88fc43e3e3ec16bacf20dafd0' where user_id=1255630;
+          'api_token' => 'IRSooPKAWU5dUeEVw6W2rQy3o6ursYtbjMGSeLjljcDSUjopSbEXXIBweli7'
+        ], $this->params);
+        $path = route('v4_bible.chapter.annotations', $params);
+    }
+  
+   /**
      * @category Route Name: v4_bible.bibleVerses
      * @category Route Path: https://api.dbp.test/bibles/X/verses?v=4&key={key}
      * @see      \App\Http\Controllers\Bible\BiblesController::bibleVerses
@@ -549,7 +570,7 @@ class BiblesRoutesTest extends ApiV4Test
      * @group    travis
      * @test
      */
-    public function bibleVerses()
+     public function bibleVerses()
     {
         $params = array_merge([ 'bible_id' => 'ENGESV' ], $this->params);
         $path = route('v4_bible.bibleVerses', $params);
@@ -595,6 +616,4 @@ class BiblesRoutesTest extends ApiV4Test
         $response = $this->withHeaders($this->params)->get($path);
         $response->assertSuccessful();
     }
-
-
 }

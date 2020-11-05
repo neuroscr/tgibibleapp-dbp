@@ -135,6 +135,7 @@ class UserHighlightsTransformer extends BaseTransformer
                           .  $bible_id . '/verses?v=4&key=' . $content_config['key']);
                         return json_decode($res->getBody() . '', true);
                     });
+
                     if (isset($bible_verse_text['books'])) {
                         // make book_id to book_data lookup map
                         $bible_book_verses_map = array();

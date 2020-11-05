@@ -96,6 +96,5 @@ class EmptyRelation extends Relation
     public function get($columns = ['*'])
     {
         return new Collection();
-        #return $this->related->newCollection([]);
     }
 }

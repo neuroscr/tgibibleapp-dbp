@@ -52,7 +52,6 @@ class UserCollectionsRoutesTest extends ApiV4Test
 
         // Ensure the new user matches the input
         $new_created_collection = json_decode($response->getContent());
-        //print_r($new_created_collection);
 
         $this->assertSame($new_collection['name'], $new_created_collection->name);
         $this->assertSame($new_collection['language_id'], $new_created_collection->language_id);
@@ -81,7 +80,6 @@ class UserCollectionsRoutesTest extends ApiV4Test
         $path = route('v4_collections.update', array_merge(['collection_id' => $new_created_collection->id], $params_token));
         echo "\nTesting: PUT $path";
         $response = $this->withHeaders($this->params)->put($path, ['name' => 'A collection updated by Feature tests']);
-        //print_r($response->getContent());
         $response->assertSuccessful();
         $collection = json_decode($response->getContent(), true);
         $this->assertSame('A collection updated by Feature tests', $collection['name']);

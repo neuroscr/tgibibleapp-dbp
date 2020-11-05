@@ -180,7 +180,6 @@ class UserHighlightsTransformer extends BaseTransformer
     private function checkColorPreference($highlight)
     {
         if (!$highlight->color) {
-            echo "transformer checkColorPreference no color found\n";
             return;
         }
         $color_preference = checkParam('prefer_color') ?? 'rgba';

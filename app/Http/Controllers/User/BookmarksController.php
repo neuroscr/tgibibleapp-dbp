@@ -327,7 +327,7 @@ class BookmarksController extends APIController
             'book_id'     => ((request()->method() === 'POST') ? 'required|' : '') . (empty($content_config['url']) ? 'exists:dbp.books,id' : ''),
             'chapter'     => ((request()->method() === 'POST') ? 'required|' : '') . 'max:150|min:1|integer',
             'verse_start' => ((request()->method() === 'POST') ? 'required|' : '') . 'max:177|min:1|integer'
-        ];
+        ]);
         $content_config = config('services.content');
         $errors = array();
         if (empty($content_config['url'])) {

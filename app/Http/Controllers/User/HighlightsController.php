@@ -402,7 +402,7 @@ class HighlightsController extends APIController
         $highlights = $highlights->orderBy($order_by, $sort_dir)->paginate($limit);
 
         // get collection
-        $highlight_collection = $highlights->get();
+        $highlight_collection = $highlights->getCollection();
 
         // adapt for pagination
         $highlight_pagination = new IlluminatePaginatorAdapter($highlights);

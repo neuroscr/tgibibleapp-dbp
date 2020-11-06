@@ -19,7 +19,7 @@ class PlaylistRoutesTest extends ApiV4Test
     public function show()
     {
         //
-        $test_playlist_id = 472982;
+        $test_playlist_id = 875;
         $path = route('v4_playlists.show', array_merge($this->params, [
             'playlist_id'    => $test_playlist_id,
         ]));

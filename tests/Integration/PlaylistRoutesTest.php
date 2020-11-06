@@ -26,7 +26,7 @@ class PlaylistRoutesTest extends ApiV4Test
         echo "\nTesting: $path";
         $response = $this->withHeaders($this->params)->get($path);
         $response->assertSuccessful();
-        $result = collect(json_decode($response->getContent()));
+        $result = collect(json_decode($response->getContent(), true));
         $this->assertEquals($result->count(), 13); // has 13 fields...
         $this->assertEquals($result['id'], $test_playlist_id);
         //$this->assertEquals($result->user->id, '1223628');

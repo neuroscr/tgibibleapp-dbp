@@ -1220,6 +1220,11 @@ class BiblesController extends APIController
     {
         $content_config = config('services.content');
         if (empty($content_config['url'])) {
+            $bible = Bible::whereId($bible_id)->first();
+            if (!$bible) {
+                return $this->setStatusCode(404)->replyWithError('Bible not found');
+            }
+        } else {
             $map = cacheRemember('bible_exist', [$bible_id], now()->addDay(),
               function () use ($bible_id, $content_config) {
                 $client = new Client();
@@ -1228,13 +1233,7 @@ class BiblesController extends APIController
                 $map = json_decode($res->getBody() . '', true);
                 return $map;
             });
-            // 404
             if ($map['error']) {
-                return $this->setStatusCode(404)->replyWithError('Bible not found');
-            }
-        } else {
-            $bible = Bible::whereId($bible_id)->first();
-            if (!$bible) {
                 return $this->setStatusCode(404)->replyWithError('Bible not found');
             }
         }

@@ -634,7 +634,8 @@ class PlaylistsController extends APIController
         return $created_playlist_items;
     }
 
-    private function createTranslatedPlaylistItems($playlist, $playlist_items)
+    // now used by SyncCollectionsPlaylist command
+    public function createTranslatedPlaylistItems($playlist, $playlist_items)
     {
         $playlist_items_to_create = [];
         $order = 1;
@@ -743,6 +744,77 @@ class PlaylistsController extends APIController
         ]);
     }
 
+    // used by SyncCollectionsPlaylist command
+    public function translate_items($bible_id, $playlist_items)
+    {
+        $audio_fileset_types = collect(['audio_stream', 'audio_drama_stream', 'audio', 'audio_drama']);
+
+        // handle content pulls
+        $config = config('services.content');
+        if (empty($config['url'])) {
+            // Local content, bible check
+            $bible = Bible::whereId($bible_id)->first();
+            if (!$bible) {
+                return -1;
+                //return $this->setStatusCode(404)->replyWithError('Bible Not Found');
+            }
+
+            $bible_language = $bible->language->name;
+            $bible_audio_filesets = $bible->filesets->whereIn('set_type_code', $audio_fileset_types);
+        } else {
+            // Remote content, combined bible/audio check
+            $bible_data = cacheRemember('bible_audio_filesets', [$bible_id], now()->addDay(), function () use ($bible_id, $config) {
+                $client = new Client();
+                $res = $client->get($config['url'] . 'bibles/' . $bible_id .
+                  '/audio?v=4&key=' . $config['key']);
+                return json_decode($res->getBody() . '');
+            });
+            // FIXME: handle Bible does not exist
+            $bible_language = $bible_data->language;
+            // convert to a collection
+            $bible_audio_filesets = collect($bible_data->audio);
+        }
+
+        $translated_items = [];
+        $metadata_items = [];
+        $total_translated_items = 0;
+        foreach ($playlist_items as $item) {
+            // item->fileset is unset, so we're using item->set_type_code instead of item->fileset->set_type_code
+            $ordered_types = $audio_fileset_types->filter(function ($type) use ($item) {
+                return $type !== $item->set_type_code;
+            })->prepend($item->set_type_code);
+            $preferred_fileset = $ordered_types->map(function ($type) use ($bible_audio_filesets, $item) {
+                return $this->getFileset($bible_audio_filesets, $type, $item->set_size_code);
+            })->firstWhere('id');
+            $has_translation = isset($preferred_fileset);
+            $is_streaming = true;
+
+            if ($has_translation) {
+                $item->fileset_id = $preferred_fileset->id;
+                $is_streaming = $preferred_fileset->set_type_code === 'audio_stream' || $preferred_fileset->set_type_code === 'audio_drama_stream';
+                $translated_items[] = (object)[
+                    'translated_id' => $item->id,
+                    'fileset_id' => $item->fileset_id,
+                    'book_id' => $item->book_id,
+                    'chapter_start' => $item->chapter_start,
+                    'chapter_end' => $item->chapter_end,
+                    'verse_start' => $is_streaming ? $item->verse_start : null,
+                    'verse_end' => $is_streaming ? $item->verse_end : null,
+                ];
+                $total_translated_items += 1;
+            }
+            $metadata_items[] = $item;
+        }
+        $translated_percentage = sizeof($playlist_items) ? $total_translated_items / sizeof($playlist_items) : 0;
+
+        return (object)[
+          'bible_language'        => $bible_language,
+          'translated_items'      => $translated_items,
+          'metadata_items'        => $metadata_items,
+          'translated_percentage' => $translated_percentage, // or total_translated_items
+        ];
+    }
+
     /**
      *
      * @OA\Get(
@@ -782,74 +854,23 @@ class PlaylistsController extends APIController
         if ($compare_projects && !empty($user) && !$this->compareProjects($user->id, $this->key)) {
             return $this->setStatusCode(401)->replyWithError(trans('api.projects_users_not_connected'));
         }
-
         $bible_id = checkParam('bible_id', true);
-        $audio_fileset_types = collect(['audio_stream', 'audio_drama_stream', 'audio', 'audio_drama']);
 
-        $config = config('services.content');
-        if (empty($config['url'])) {
-            // Local content, bible check
-            $bible = cacheRemember('bible_translate', [$bible_id], now()->addDay(), function () use ($bible_id) {
-                return Bible::whereId($bible_id)->first();
-            });
-
-            if (!$bible) {
-                return $this->setStatusCode(404)->replyWithError('Bible Not Found');
-            }
-
-            $bible_language = $bible->language->name;
-        } else {
-            // Remote content, combined bible/audio check
-            $client = new Client();
-            $res = $client->get($config['url'] . 'bibles/' . $bible_id .
-              '/audio?v=4&key=' . $config['key']);
-            $bible_data = json_decode($res->getBody() . '');
-            $bible_language = $bible_data->language;
-            // convert to a collection
-            $bible_audio_filesets = collect($bible_data->audio);
-        }
-
+        // get non user tied playlist
         $playlist = $this->getPlaylist(false, $playlist_id);
         if (!$playlist) {
             return $this->setStatusCode(404)->replyWithError('Playlist Not Found');
         }
-
-        if (empty($config['url'])) {
-            // Local content, get audio
-            $bible_audio_filesets = $bible->filesets->whereIn('set_type_code', $audio_fileset_types);
+        $result = $this->translate_items($bible_id, $playlist->items);
+        if (!is_object($result)) {
+            return $this->setStatusCode(404)->replyWithError('Bible Not Found');
         }
+        $bible_language        = $result->bible_language;
+        $translated_items      = $result->translated_items;
+        $metadata_items        = $result->$metadata_items;
+        $translated_percentage = $result->translated_percentage;
 
-        $translated_items = [];
-        $metadata_items = [];
-        $total_translated_items = 0;
-        foreach ($playlist->items as $item) {
-            $ordered_types = $audio_fileset_types->filter(function ($type) use ($item) {
-                return $type !== $item->fileset->set_type_code;
-            })->prepend($item->fileset->set_type_code);
-            $preferred_fileset = $ordered_types->map(function ($type) use ($bible_audio_filesets, $item) {
-                return $this->getFileset($bible_audio_filesets, $type, $item->fileset->set_size_code);
-            })->firstWhere('id');
-            $has_translation = isset($preferred_fileset);
-            $is_streaming = true;
-
-            if ($has_translation) {
-                $item->fileset_id = $preferred_fileset->id;
-                $is_streaming = $preferred_fileset->set_type_code === 'audio_stream' || $preferred_fileset->set_type_code === 'audio_drama_stream';
-                $translated_items[] = (object)[
-                    'translated_id' => $item->id,
-                    'fileset_id' => $item->fileset_id,
-                    'book_id' => $item->book_id,
-                    'chapter_start' => $item->chapter_start,
-                    'chapter_end' => $item->chapter_end,
-                    'verse_start' => $is_streaming ? $item->verse_start : null,
-                    'verse_end' => $is_streaming ? $item->verse_end : null,
-                ];
-                $total_translated_items += 1;
-            }
-            $metadata_items[] = $item;
-        }
-        $translated_percentage = sizeof($playlist->items) ? $total_translated_items / sizeof($playlist->items) : 0;
-
+        // create new playlist
         $playlist_data = [
             'user_id'           => $user->id,
             'name'              => $playlist->name . ': ' . $bible_language . ' ' . substr($bible_id, -3),
@@ -858,11 +879,10 @@ class PlaylistsController extends APIController
             'draft'             => true
         ];
 
-
+        // stomp $playlist with target
         $playlist = Playlist::create($playlist_data);
-        // this fails on a FK
-        $items = collect($this->createTranslatedPlaylistItems($playlist, $translated_items));
 
+        $items = collect($this->createTranslatedPlaylistItems($playlist, $translated_items));
 
         foreach ($metadata_items as $item) {
             $new_item = $items->first(function ($new_item) use ($item) {
@@ -1207,6 +1227,7 @@ class PlaylistsController extends APIController
                 if ($bible) {
                     $item->bible_id = $bible->id;
                 }
+                $item->set_type_code = $item->fileset->set_type_code;
                 unset($item->fileset);
                 return $item;
             });
@@ -1215,23 +1236,53 @@ class PlaylistsController extends APIController
 
             // get a unique lists of filesets we need to look up
             $fileset_ids = $playlist->items->map(function ($item) {
-              return $item->fileset_id;
+                return $item->fileset_id;
             })->unique();
-            // query content server
-            $client = new Client();
-            $res = $client->get($config['url'] . 'bibles/filesets/'.
-              join(',',$fileset_ids->toArray()).'/playlist?v=4&key=' . $config['key']);
-            $filesets_bibles = json_decode($res->getBody() . '', true);
 
-            // process result
-            $playlist->items = $playlist->items->map(function ($item) use ($filesets_bibles) {
-                $res = $filesets_bibles[$item->fileset_id];
-                if ($res && count($res)) {
-                    $item->bible_id = $res[0]['bible_id'];
+            if ($fileset_ids->count()) {
+
+                // could be more granular (by fileset_id)
+                $filesets_bibles = [];
+                $lookups = [];
+                $cache_key = 'bible_filesets_playlist';
+                foreach($fileset_ids as $fileset_id) {
+                    $cache_string = generateCacheString($cache_key, [$fileset_id]);
+                    $fileset = cacheGet($cache_string);
+                    if ($fileset) {
+                        $filesets_bibles[$fileset_id] = $fileset;
+                    } else {
+                        $lookups[] = $fileset_id;
+                    }
                 }
-                unset($item->fileset);
-                return $item;
-            });
+                // run the one content lookup if we even need it
+                if (count($lookups)) {
+                    // query content server
+                    $client = new Client();
+                    $res = $client->get($config['url'] . 'bibles/filesets/'.
+                      join(',',$fileset_ids->toArray()).'/playlist?v=4&key=' . $config['key']);
+                    $filesets_bibles_download = json_decode($res->getBody() . '', true);
+                    foreach($filesets_bibles_download as $fileset_id => $fileset) {
+                        $filesets_bibles[$fileset_id] = $fileset;
+                        $cache_string = generateCacheString($cache_key, [$fileset_id]);
+                        cacheAdd($cache_string, $fileset, now()->addDay());
+                    }
+                }
+
+                // process result
+                $playlist->items = $playlist->items->map(
+                  function ($item) use ($filesets_bibles) {
+                    $res = $filesets_bibles[$item->fileset_id];
+                    if ($res && count($res)) {
+                        $item->bible_id = $res[0]['bible_id'];
+                        // which will be one of ['audio_stream', 'audio_drama_stream', 'audio', 'audio_drama']
+                        $item->set_type_code = $res[0]['set_type_code'];
+                    } else {
+                        echo 'Content server does not have fileset[', $item->fileset_id, "]\n";
+                    }
+                    unset($item->fileset);
+                    return $item;
+                });
+            } // else no items
         }
 
         return $playlist;

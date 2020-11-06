@@ -364,6 +364,7 @@ class TextController extends APIController
             return $this->setStatusCode(401)->replyWithError(trans('api.projects_users_not_connected'));
         }
         $query = strtolower(checkParam('query', true));
+
         $plans = Plan::with('days')
             ->with('user')
             ->where('plans.name', 'like', '%' . $query . '%')
@@ -389,24 +390,45 @@ class TextController extends APIController
             ->select(['user_playlists.*', DB::Raw('IF(playlists_followers.user_id, true, false) as following')])
             ->orderBy('name', 'asc')->get();
 
+        $content_config = config('services.content');
         $highlights = Highlight::where('user_id', $user->id)
             ->orderBy('user_highlights.updated_at')->limit($limit)->get()
-            ->filter(function ($highlight) use ($query) {
-                return str_contains(strtolower($highlight->book->name . ' ' . $highlight->verse_text), $query);
+            ->filter(function ($highlight) use ($query, $content_config) {
+                if (empty($content_config['url'])) {
+                    return str_contains(strtolower($highlight->book->name . ' ' . $highlight->verse_text), $query);
+                } else {
+                    // get book name
+                    $hl_xfrmr = new UserHighlightsTransformer();
+                    $xfmrd_hl = $hl_xfrmr->transformForV4($highlight);
+                    return str_contains(strtolower($xfmrd_hl['book_name'] . ' ' . $highlight->verse_text), $query);
+                }
             });
 
         $bookmarks = Bookmark::where('user_id', $user->id)
             ->limit($limit)->get()
-            ->filter(function ($bookmark) use ($query) {
-                return str_contains(strtolower($bookmark->book->name . ' ' . $bookmark->verse_text), $query);
+            ->filter(function ($bookmark) use ($query, $content_config) {
+                if (empty($content_config['url'])) {
+                    return str_contains(strtolower($bookmark->book->name . ' ' . $bookmark->verse_text), $query);
+                } else {
+                    // get book name
+                    $bookmark_xfrmr = new UserBookmarksTransformer();
+                    $xfmrd_bookmark = $note_xfrmr->transformForV4($bookmark);
+                    return str_contains(strtolower($xfmrd_bookmark['book_name'] . ' ' . $bookmark->verse_text), $query);
+                }
             });
 
         $notes = Note::where('user_id', $user->id)
             ->limit($limit)->get()
-            ->filter(function ($note) use ($query) {
-                return str_contains(strtolower($note->book->name . ' ' . $note->verse_text), $query);
+            ->filter(function ($note) use ($query, $content_config) {
+                if (empty($content_config['url'])) {
+                    return str_contains(strtolower($note->book->name . ' ' . $note->verse_text), $query);
+                } else {
+                    // get book name
+                    $note_xfrmr = new UserNotesTransformer();
+                    $xfmrd_note = $note_xfrmr->transform($note);
+                    return str_contains(strtolower($xfmrd_note['book_name'] . ' ' . $note->verse_text), $query);
+                }
             });
-
 
         return $this->reply([
             'bookmarks' => fractal($bookmarks, UserBookmarksTransformer::class)->toArray()['data'],

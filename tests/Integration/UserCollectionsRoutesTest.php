@@ -105,10 +105,6 @@ class UserCollectionsRoutesTest extends ApiV4Test
         $result = collect(json_decode($response->getContent()));
         $response->assertSuccessful();
         // could be zero or more likely to have records
-        /*
-        $collection = json_decode($response->getContent(), true);
-        $this->assertEquals(0, count($collection['data']));
-        */
     }
 
     /**
@@ -172,7 +168,6 @@ class UserCollectionsRoutesTest extends ApiV4Test
         $this->assertEquals($new_collection_playlist['collection_id'], $new_created_collection_playlist->collection_id);
         $this->assertEquals($new_collection_playlist['playlist_id'],   $new_created_collection_playlist->playlist_id);
         $this->assertEquals($new_collection_playlist['order_column'],  $new_created_collection_playlist->order_column);
-        //$this->assertEquals($new_collection['user_id'], $new_created_collection->user_id);
     }
 
     /**

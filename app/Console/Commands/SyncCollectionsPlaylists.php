@@ -48,7 +48,6 @@ class SyncCollectionsPlaylists extends Command
           ->where('chapter_start', '=', $chapter)->where('chapter_end', '=', $chapter)
           ->where('verse_start', '=', $verseList)->where('verse_end', '=', $verseList)
           ->get();
-        //echo "Count[", $coll->count(), "]\n";
         if (!$coll->count()) {
             // if not found then create
             echo "Creating [$playlist_id]playlistItem book[$book_id] $chapter:$verseList\n";
@@ -93,7 +92,6 @@ class SyncCollectionsPlaylists extends Command
         $coll = DB::connection('dbp_users')->table('user_playlists')
           ->where('name', '=', $name)->where('user_id', '=', $this->user_id)
           ->where('language_id', '=', $language_id)->get();
-        //echo "Count[", $coll->count(), "]\n";
         if (!$coll->count()) {
             // if not found then create
             echo "Creating playlist [$name]\n";
@@ -115,7 +113,6 @@ class SyncCollectionsPlaylists extends Command
     private function ensureCollection($name) {
         // find
         $coll = DB::connection('dbp_users')->table('collections')->where('name', '=', $name)->get();
-        //echo "Count[", $coll->count(), "]\n";
         if (!$coll->count()) {
             // if not found then create
             echo "Creating collection [$name]\n";
@@ -140,7 +137,6 @@ class SyncCollectionsPlaylists extends Command
         } else {
             $coll = DB::connection('dbp')->table('languages')->where('iso1', '=', $lang)->get();
         }
-        //echo "Count[", $coll->count(), "]\n";
         if (!$coll->count()) {
             return 0;
         }
@@ -152,7 +148,6 @@ class SyncCollectionsPlaylists extends Command
     {
         $coll = DB::connection('dbp')->table('bibles_defaults')->where('type', '=', 'audio')
           ->where('language_code', '=', $lang)->select(['bible_id'])->get();
-        //echo "Count[", $coll->count(), "]\n";
         if (!$coll->count()) {
             return 0;
         }
@@ -181,7 +176,6 @@ class SyncCollectionsPlaylists extends Command
             return $this->setStatusCode(404)->replyWithError('Bible Not Found');
         }
         $translated_items = $result->translated_items;
-        //echo "Translated [", count($translated_items),"]items\n";
 
         $dst = DB::connection('dbp_users')->table('user_playlists')
           ->where('id', '=', $trg_playlist_id)->first();
@@ -231,9 +225,7 @@ class SyncCollectionsPlaylists extends Command
           foreach($row as $en_title => $title) {
               $en_playlist_id = $this->ensurePlaylist($collection_id, $en_title, 6414);
 
-              //echo "[$lang] playlist[$playlist] title[$title]\n";
               // so we need to ensure a playlist with this language and custom title
-              //echo "Language_id[$language_id]\n";
               $playlist_id = $this->ensurePlaylist($collection_id, $title, $language_id);
 
               // copy playlist_items from this playlist_id...
@@ -301,20 +293,12 @@ class SyncCollectionsPlaylists extends Command
         $missingBooks = array();
         foreach($collections_eng as $row) {
             // Collection, Playlist Title is same in both
-            //print_r($row);
+
             // Collection
             $collection_id = $this->ensureCollection($row['Collection']);
             // Playlist Title (en)
             $playlist_id = $this->ensurePlaylist($collection_id, $row['Playlist Title'], 6414);
-            // 1103 version
-            /*
-            // Chapter:Verse #1-8
-            for($i = 1; $i < 9; $i++) {
-                if (isset($row['Chapter:Verse #' . $i]) && $row['Chapter:Verse #' . $i]) {
-                    //echo "Need to look up [", $row['Chapter:Verse #' . $i], "]\n";
-                }
-            }
-            */
+
             // 1104 version
             // Book, Chapter, VersesList
             $book_id = $this->locateBook($row['Book']);

@@ -159,12 +159,8 @@ class SyncCollectionsPlaylists extends Command
     {
         $plc = new PlaylistsController;
         // get a list of items
-        // this won't have the remote workarounds that are now expected
-        /*
-        $srcList = DB::connection('dbp_users')->table('playlist_items')
-          ->where('playlist_id', '=', $src_playlist_id)
-          ->get();
-        */
+        // can't directly pull from playlist_items table
+        // supporting functions expect the remote split
         $srcList = $plc->getPlaylist(false, $src_playlist_id);
         if (!$srcList->items->count()) {
             echo "Playlist [$src_playlist_id] has no playlist items\n";

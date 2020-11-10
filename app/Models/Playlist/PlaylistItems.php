@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Spatie\EloquentSortable\Sortable;
 use Spatie\EloquentSortable\SortableTrait;
 use GuzzleHttp\Client;
+use App\Relations\EmptyRelation;
 
 /**
  * App\Models\Playlist
@@ -527,7 +528,13 @@ class PlaylistItems extends Model implements Sortable
 
     public function fileset()
     {
-        return $this->belongsTo(BibleFileset::class);
+        $content_config = config('services.content');
+        if (empty($content_config['url'])) {
+            // how does this work because ENGESV has multiple records...
+            return $this->belongsTo(BibleFileset::class);
+        } else {
+            return new EmptyRelation();
+        }
     }
 
     public function complete()

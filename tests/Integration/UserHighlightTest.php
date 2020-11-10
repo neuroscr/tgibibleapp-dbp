@@ -22,6 +22,7 @@ class UserHighlightTest extends ApiV4Test
      */
     public function highlightIndexErrors()
     {
+        $this->markTestIncomplete('Route is not defined');
         // User 404
         $path = route('v4_highlights.index', Arr::add($this->params, 'user_id', 'not-a-real-user'));
         echo "\nTesting: $path";
@@ -40,6 +41,7 @@ class UserHighlightTest extends ApiV4Test
      */
     public function highlights()
     {
+        $this->markTestIncomplete('Route is not defined');
         $key = Key::where('key', $this->key)->first();
         $path = route('v4_highlights.index', Arr::add($this->params, 'user_id', $key->user_id));
         echo "\nTesting: $path";

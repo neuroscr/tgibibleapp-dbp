@@ -613,13 +613,7 @@ class CollectionsController extends APIController
                 if ($playlist->language_id !== $language_id) {
                     return false;
                 }
-                //$colPlaylist->playlist = $playlist;
             }
-            /*
-            if (!$show_items) {
-                unset($colPlaylist->items);
-            }
-            */
             return true;
         })->toArray();
 

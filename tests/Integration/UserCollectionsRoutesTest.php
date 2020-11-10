@@ -104,9 +104,11 @@ class UserCollectionsRoutesTest extends ApiV4Test
         $response = $this->withHeaders($this->params)->get($path);
         $result = collect(json_decode($response->getContent()));
         $response->assertSuccessful();
+        // could be zero or more likely to have records
+        /*
         $collection = json_decode($response->getContent(), true);
-        // zero collections
         $this->assertEquals(0, count($collection['data']));
+        */
     }
 
     /**
@@ -154,7 +156,7 @@ class UserCollectionsRoutesTest extends ApiV4Test
         // test store
         $new_collection_playlist = factory(CollectionPlaylist::class)->make([
           'collection_id' => $new_created_collection->id,
-          'playlist_id'   => 4,
+          'playlist_id'   => 875,
           'order_column'  => 1,
         ]);
         $path = route('v4_collection_playlists.store', array_merge([
@@ -190,7 +192,7 @@ class UserCollectionsRoutesTest extends ApiV4Test
           'id' => $new_created_collection->id,
         ], $this->params);
         $path = route('v4_collections.playlists', $params);
-        echo "\nTesting: $path";
+        echo "\nTesting: GET $path";
 
         $response = $this->withHeaders($this->params)->get($path);
         $response->assertSuccessful();
@@ -200,6 +202,100 @@ class UserCollectionsRoutesTest extends ApiV4Test
         $this->assertEquals($new_created_collection_playlist->collection_id, $collection_playlist_result->playlists[0]->collection_id);
         $this->assertEquals($new_created_collection_playlist->playlist_id,   $collection_playlist_result->playlists[0]->playlist_id);
         $this->assertEquals($new_created_collection_playlist->order_column,  $collection_playlist_result->playlists[0]->order_column);
+    }
+
+    /**
+     * @category V4_API
+     * @category Route Name: v4_collections.playlists
+     * @category Route Path: https://api.dbp.test/collections/1?v=4&key={key}
+     * @see      \App\Http\Controllers\Collection\CollectionsController::getPlaylists
+     * @group    CollectionRoutes
+     * @group    V4
+     * @group    travis
+     * @test
+     */
+    public function collectionsPlaylistsWithDetails()
+    {
+        global $new_created_collection, $new_created_collection_playlist;
+        // open all the paths for deep path testing
+        $params = array_merge([
+          'id' => $new_created_collection->id,
+          'show_details' => true,
+          'show_items' => true,
+          'show_text' => true,
+        ], $this->params);
+        $path = route('v4_collections.playlists', $params);
+        echo "\nTesting: GET $path";
+
+        $response = $this->withHeaders($this->params)->get($path);
+        $response->assertSuccessful();
+
+        $collection_playlist_result = json_decode($response->getContent());
+
+        $this->assertEquals(count($collection_playlist_result->playlists), 1);
+        // show details sets this
+        $this->assertEquals('http://api.dbp.test/api/playlists/875/hls?v=4&key=L1ofChl8Kx1jWExu', $collection_playlist_result->playlists[0]->path);
+        // show_items should have items
+        $this->assertGreaterThan(0, count($collection_playlist_result->playlists[0]->items));
+        // show_text should have verses in the items
+        $this->assertTrue(isset($collection_playlist_result->playlists[0]->items[0]->verse_text));
+    }
+    /**
+     * @category V4_API
+     * @category Route Name: v4_collections.playlists
+     * @category Route Path: https://api.dbp.test/collections/1?v=4&key={key}
+     * @see      \App\Http\Controllers\Collection\CollectionsController::getPlaylists
+     * @group    CollectionRoutes
+     * @group    V4
+     * @group    travis
+     * @test
+     */
+    public function collectionsPlaylistsLanguageInclude()
+    {
+        global $new_created_collection, $new_created_collection_playlist;
+        $params = array_merge([
+          'id' => $new_created_collection->id,
+          'iso' => 'eng'
+        ], $this->params);
+        $path = route('v4_collections.playlists', $params);
+        echo "\nTesting: GET $path";
+
+        $response = $this->withHeaders($this->params)->get($path);
+        $response->assertSuccessful();
+
+        $collection_playlist_result = json_decode($response->getContent());
+        $this->assertEquals(count($collection_playlist_result->playlists), 1);
+        $this->assertEquals($new_created_collection_playlist->collection_id, $collection_playlist_result->playlists[0]->collection_id);
+        $this->assertEquals($new_created_collection_playlist->playlist_id,   $collection_playlist_result->playlists[0]->playlist_id);
+        $this->assertEquals($new_created_collection_playlist->order_column,  $collection_playlist_result->playlists[0]->order_column);
+    }
+
+    /**
+     * @category V4_API
+     * @category Route Name: v4_collections.playlists
+     * @category Route Path: https://api.dbp.test/collections/1?v=4&key={key}
+     * @see      \App\Http\Controllers\Collection\CollectionsController::getPlaylists
+     * @group    CollectionRoutes
+     * @group    V4
+     * @group    travis
+     * @test
+     */
+    public function collectionsPlaylistsLanguageExclusive()
+    {
+        global $new_created_collection, $new_created_collection_playlist;
+        $params = array_merge([
+          'id' => $new_created_collection->id,
+          'iso' => 'x'
+        ], $this->params);
+        $path = route('v4_collections.playlists', $params);
+        echo "\nTesting: GET $path";
+
+        $response = $this->withHeaders($this->params)->get($path);
+        $response->assertSuccessful();
+
+        $collection_playlist_result = json_decode($response->getContent());
+        //print_r($collection_playlist_result);
+        $this->assertEquals(count($collection_playlist_result->playlists), 0);
     }
 
     /**

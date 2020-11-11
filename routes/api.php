@@ -32,7 +32,6 @@ Route::name('v4_bible.copyright')->get('bibles/{bible_id}/copyright',           
 Route::name('v4_bible.getAudio')->get('bibles/{bible_id?}/audio',                  'Bible\BiblesController@getAudio');
 Route::name('v4_bible.getFilesetVernacularMetaData')->get('bibles/{bible_id?}/books/{book_id?}/testament/{testament}',                  'Bible\BiblesController@getFilesetVernacularMetaData');
 
-Route::name('v4_bible.chapter')
 Route::name('v4_internal_bible.chapter')
     ->middleware('APIToken')->get('bibles/{bible_id}/chapter',                     'Bible\BiblesController@chapter');
 Route::name('v4_internal_bible.chapter.annotations')
@@ -45,17 +44,12 @@ Route::name('v4_internal_filesets.podcast')->get('bibles/filesets/{fileset_id}/p
 Route::name('v4_filesets.download')->get('bibles/filesets/{fileset_id}/download',  'Bible\BibleFileSetsController@download');
 Route::name('v4_filesets.copyright')->get('bibles/filesets/{fileset_id}/copyright', 'Bible\BibleFileSetsController@copyright');
 Route::name('v4_filesets.show')->get('bibles/filesets/{fileset_id?}',              'Bible\BibleFileSetsController@show');
-<<<<<<< HEAD
 Route::name('v4_filesets.showMultiple')->get('bibles/filesets/{fileset_id?}/playlist',              'Bible\BibleFileSetsController@getPlaylistMeta');
 Route::name('v4_filesets.showAudio')->get('bibles/filesets/{fileset_id?}/audio',              'Bible\BibleFileSetsController@showAudio');
 Route::name('v4_filesets.showStream')->get('bibles/filesets/{fileset_id?}/stream/{book_id?}',          'Bible\BibleFileSetsController@showStream');
 Route::name('v4_filesets.showFeatured')->get('bibles/filesets/{fileset_id}/verses',              'Bible\BibleFileSetsController@showFeatured');
-Route::name('v4_filesets.update')->put('bibles/filesets/{fileset_id}',             'User\Dashboard\BibleFilesetsManagementController@update');
-Route::name('v4_filesets.store')->post('bibles/filesets',             'User\Dashboard\BibleFilesetsManagementController@store');
-=======
 Route::name('v4_internal_filesets.update')->put('bibles/filesets/{fileset_id}',     'User\Dashboard\BibleFilesetsManagementController@update');
 Route::name('v4_internal_filesets.store')->post('bibles/filesets',             'User\Dashboard\BibleFilesetsManagementController@store');
->>>>>>> b31095800d95699b000e6e2a78b8fc1017476643
 Route::name('v4_filesets.books')->get('bibles/filesets/{fileset_id}/books',        'Bible\BooksController@show');
 
 // VERSION 4 | Text

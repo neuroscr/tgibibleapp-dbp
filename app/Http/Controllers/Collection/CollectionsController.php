@@ -603,7 +603,6 @@ class CollectionsController extends APIController
             // if filtering by language
             if ($iso) {
                 // get playlist language
-                //$playlist = $playlist_controller->getPlaylist($user, $colPlaylist['playlist_id']);
                 if ($colPlaylist['language_id'] !== $language_id) {
                     return false;
                 }

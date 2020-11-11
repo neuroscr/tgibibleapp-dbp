@@ -34,7 +34,7 @@ class HighlightsController extends APIController
      *     summary="List a user's highlights",
      *     description="The bible_id, book_id, and chapter parameters are optional but
      *          will allow you to specify which specific highlights you wish returned.",
-     *     operationId="v4_highlights.index",
+     *     operationId="v4_internal_highlights.index",
      *     security={{"api_token":{}}},
      *     @OA\Parameter(
      *          name="user_id",
@@ -98,10 +98,7 @@ class HighlightsController extends APIController
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_highlights_index")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(ref="#/components/schemas/v4_highlights_index")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(ref="#/components/schemas/v4_highlights_index")),
-     *         @OA\MediaType(mediaType="text/csv",      @OA\Schema(ref="#/components/schemas/v4_highlights_index"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_internal_highlights_index"))
      *     )
      * )
      *
@@ -402,7 +399,7 @@ class HighlightsController extends APIController
         $highlights = $highlights->orderBy($order_by, $sort_dir)->paginate($limit);
 
         // get collection
-        $highlight_collection = $highlights->get();
+        $highlight_collection = $highlights->getCollection();
 
         // adapt for pagination
         $highlight_pagination = new IlluminatePaginatorAdapter($highlights);
@@ -418,7 +415,7 @@ class HighlightsController extends APIController
      *     tags={"Annotations"},
      *     summary="Create a highlight",
      *     description="",
-     *     operationId="v4_highlights.store",
+     *     operationId="v4_internal_highlights.store",
      *     security={{"api_token":{}}},
      *     @OA\Parameter(name="user_id",  in="path", required=true, @OA\Schema(ref="#/components/schemas/User/properties/id")),
      *     @OA\RequestBody(required=true, description="Fields for User Highlight Creation", @OA\MediaType(mediaType="application/json",
@@ -437,10 +434,7 @@ class HighlightsController extends APIController
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_highlights_index")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(ref="#/components/schemas/v4_highlights_index")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(ref="#/components/schemas/v4_highlights_index")),
-     *         @OA\MediaType(mediaType="text/csv",      @OA\Schema(ref="#/components/schemas/v4_highlights_index"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_internal_highlights_index"))
      *     )
      * )
      *
@@ -488,7 +482,7 @@ class HighlightsController extends APIController
      *     tags={"Annotations"},
      *     summary="Alter a highlight",
      *     description="",
-     *     operationId="v4_highlights.update",
+     *     operationId="v4_internal_highlights.update",
      *     security={{"api_token":{}}},
      *     @OA\Parameter(name="user_id", in="path", required=true, @OA\Schema(ref="#/components/schemas/User/properties/id")),
      *     @OA\Parameter(name="highlight_id", in="path", required=true, @OA\Schema(ref="#/components/schemas/Highlight/properties/id")),
@@ -506,10 +500,7 @@ class HighlightsController extends APIController
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_highlights_index")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(ref="#/components/schemas/v4_highlights_index")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(ref="#/components/schemas/v4_highlights_index")),
-     *         @OA\MediaType(mediaType="text/csv",      @OA\Schema(ref="#/components/schemas/v4_highlights_index"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_internal_highlights_index"))
      *     )
      * )
      *
@@ -560,17 +551,14 @@ class HighlightsController extends APIController
      *     tags={"Annotations"},
      *     summary="Delete a highlight",
      *     description="",
-     *     operationId="v4_highlights.delete",
+     *     operationId="v4_internal_highlights.delete",
      *     security={{"api_token":{}}},
      *     @OA\Parameter(name="user_id", in="path", required=true, @OA\Schema(ref="#/components/schemas/User/properties/id")),
      *     @OA\Parameter(name="highlight_id", in="path", required=true, @OA\Schema(ref="#/components/schemas/Highlight/properties/id")),
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(type="string")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(type="string")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(type="string")),
-     *         @OA\MediaType(mediaType="text/csv",      @OA\Schema(type="string"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(type="string"))
      *     )
      * )
      *
@@ -606,24 +594,21 @@ class HighlightsController extends APIController
      *     tags={"Annotations"},
      *     summary="List a user's highlights colors",
      *     description="List a user's highlights colors",
-     *     operationId="v4_highlights.colors",
+     *     operationId="v4_internal_highlights.colors",
      *     security={{"api_token":{}}},
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_highlights_colors")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(ref="#/components/schemas/v4_highlights_colors")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(ref="#/components/schemas/v4_highlights_colors")),
-     *         @OA\MediaType(mediaType="text/csv",      @OA\Schema(ref="#/components/schemas/v4_highlights_colors"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_internal_highlights_colors"))
      *     )
      * )
      *
      * @OA\Schema (
      *    type="array",
-     *    schema="v4_highlights_colors",
+     *    schema="v4_internal_highlights_colors",
      *    description="The v4 highlights colors index response.",
-     *    title="v4_highlights_colors",
-     *   @OA\Xml(name="v4_highlights_colors"),
+     *    title="v4_internal_highlights_colors",
+     *   @OA\Xml(name="v4_internal_highlights_colors"),
      *    @OA\Items(ref="#/components/schemas/Highlight/properties/highlighted_color"),
      *     )
      *   )

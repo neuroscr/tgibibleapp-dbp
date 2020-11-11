@@ -3,9 +3,6 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
-use OpenApi\Annotations\Parameter;
 
 class SwaggerDocsController extends Controller
 {
@@ -27,18 +24,12 @@ class SwaggerDocsController extends Controller
 
     public function swaggerDocsGen($version)
     {
-        if (!defined('API_URL_DOCS')) {
-            define('API_URL_DOCS', config('app.api_url'));
+        if (file_exists(public_path('openapi.json'))) {
+            $swagger = file_get_contents(public_path('openapi.json'));
+            return response($swagger)->header('Content-Type', 'application/json');
+        } else {
+            return response('Not Found', 404);
         }
-        $swagger = cacheRemember('OAS', [$version], now()->addDay(), function () use ($version) {
-            $swagger = \OpenApi\scan(app_path());
-            $swagger->tags  = $this->swaggerVersionTags($swagger->tags, $version);
-            $swagger->paths = $this->swaggerVersionPaths($swagger->paths, $version);
-            $swagger->paths = $this->addCommonParameters($swagger->paths);
-            $swagger->components  = $this->removeUnusedComponents($swagger, $version);
-            return $swagger;
-        });
-        return response()->json($swagger)->header('Content-Type', 'application/json');
     }
 
     private function removeUnusedComponents($swagger, $version)
@@ -110,10 +101,5 @@ class SwaggerDocsController extends Controller
         if (gettype($parameters) == 'string') {
             $parameters = [];
         }
-        $parameters[] = new Parameter(['ref' => '#/components/parameters/format']);
-        $parameters[] = new Parameter(['ref' => '#/components/parameters/key']);
-        $parameters[] = new Parameter(['ref' => '#/components/parameters/pretty']);
-        $parameters[] = new Parameter(['ref' => '#/components/parameters/version_number']);
-        return $parameters;
     }
 }

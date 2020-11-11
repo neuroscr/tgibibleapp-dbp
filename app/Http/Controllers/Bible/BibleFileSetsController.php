@@ -203,25 +203,26 @@ class BibleFileSetsController extends APIController
     }
 
 
-    private function processHLSAudio($bible_files)
+    private function processHLSAudio($bible_files, $transaction_id)
     {
-        $hls_items = [];
+        $hls_items    = [];
+        $signed_files = [];
         foreach ($bible_files as $bible_file) {
             $currentBandwidth = $bible_file->streamBandwidth->first();
             $transportStream = sizeof($currentBandwidth->transportStreamBytes) ? $currentBandwidth->transportStreamBytes : $currentBandwidth->transportStreamTS;
             // create temporary fileset holder
             $fileset = $bible_file->fileset;
-            $hls_item = array(
+            $hls_item = [
                 'type'          => 'hls',
                 'chapter_start' => $bible_file->chapter_start,
                 'chapter_end'   => $bible_file->chapter_end,
-                'subitems'      => array(),
-            );
+                'subitems'      => [],
+            ];
             foreach ($transportStream as $stream_position => $stream) {
-                $hls_subitem = array(
+                $hls_subitem = [
                     'duration'      => $stream->runtime,
                     'position'      => $stream_position,
-                );
+                ];
                 if (isset($stream->timestamp)) {
                     $hls_subitem['bytes']  = $stream->bytes;
                     $hls_subitem['offset'] = $stream->offset;
@@ -230,10 +231,14 @@ class BibleFileSetsController extends APIController
                     // stomp stream->file_name
                     $stream->file_name = $stream->timestamp->bibleFile->file_name;
                 }
-                $hls_subitem['fileset_id'] = $fileset->id;
-                $hls_subitem['asset_id'] = $fileset->asset_id;
-                $hls_subitem['file_name'] = $stream->file_name;
-                $hls_subitem['path'] = $bible_file->fileset->bible->first()->id;
+
+                $bible_path = $fileset->bible->first()->id;
+                $file_path = 'audio/' . $bible_path . '/' . $fileset->id . '/' . $bible_file->file_name;
+                if (!isset($signed_files[$file_path])) {
+                    $signed_files[$file_path] = $this->signedUrl($file_path, $fileset->asset_id, $transaction_id);
+                }
+                $hls_subitem['file_path'] = $file_path;
+                $hls_subitem['signed_file'] = $signed_files[$file_path];
                 $hls_item['subitems'][] = $hls_subitem;
             }
             $hls_items[] = $hls_item;
@@ -241,21 +246,25 @@ class BibleFileSetsController extends APIController
         return $hls_items;
     }
 
-    private function processMp3Audio($bible_files)
+    private function processMp3Audio($bible_files, $transaction_id)
     {
-        $hls_items   = [];
+        $hls_items    = [];
+        $signed_files = [];
         foreach ($bible_files as $bible_file) {
-            $fileset          = $bible_file->fileset;
-            $hls_items[]      = array(
+            $fileset    = $bible_file->fileset;
+            $bible_path = $fileset->bible->first()->id;
+            $file_path  = 'audio/' . $bible_path . '/' . $fileset->id . '/' . $bible_file->file_name;
+            if (!isset($signed_files[$file_path])) {
+                $signed_files[$file_path] = $this->signedUrl($file_path, $fileset->asset_id, $transaction_id);
+            }
+            $hls_items[]      = [
                 'type'          => 'mp3',
                 'chapter_start' => $bible_file->chapter_start,
                 'chapter_end'   => $bible_file->chapter__end,
                 'duration'      => $bible_file->duration ?? 180,
-                'fileset_id'    => $fileset->id,
-                'asset_id'      => $fileset->asset_id,
-                'path'          => $fileset->bible->first()->id,
-                'file_name'     => $bible_file->file_name,
-            );
+                'file_path'     => $file_path,
+                'signed_file'   => $signed_files[$file_path]
+            ];
         }
         return $hls_items;
     }
@@ -266,6 +275,10 @@ class BibleFileSetsController extends APIController
         if (!$fileset) {
             return $this->setStatusCode(404)->replyWithError(trans('api.bible_fileset_errors_404'));
         }
+        $transaction_id = (int)checkParam('transaction_id');
+        if (!$transaction_id) {
+            return $this->setStatusCode(404)->replyWithError('Invalid transaction_id');
+        }
 
         // we need book_id to narrow down the transport streams
         $bible_files = BibleFile::with('streamBandwidth.transportStreamTS')->with('streamBandwidth.transportStreamBytes')->where([
@@ -274,9 +287,9 @@ class BibleFileSetsController extends APIController
         ])
             ->get();
         if ($fileset->set_type_code === 'audio_stream' || $fileset->set_type_code === 'audio_drama_stream') {
-            $hls_items = $this->processHLSAudio($bible_files, $fileset_id);
+            $hls_items = $this->processHLSAudio($bible_files, $transaction_id);
         } else {
-            $hls_items = $this->processMp3Audio($bible_files, $fileset_id);
+            $hls_items = $this->processMp3Audio($bible_files, $transaction_id);
         }
         return $this->reply($hls_items);
     }

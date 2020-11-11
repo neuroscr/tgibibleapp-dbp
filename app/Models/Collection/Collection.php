@@ -85,6 +85,16 @@ class Collection extends Model
     /**
      *
      * @OA\Property(
+     *   title="thumbnail_url",
+     *   type="string",
+     *   description="The thumbnail of the (featured) collection"
+     * )
+     *
+     */
+    protected $thumbnail_url;
+    /**
+     *
+     * @OA\Property(
      *   title="order_column",
      *   type="string",
      *   description="The order of this collection in user's collections"

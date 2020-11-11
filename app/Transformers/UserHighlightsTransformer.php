@@ -26,11 +26,11 @@ class UserHighlightsTransformer extends BaseTransformer
     /**
      * @OA\Schema (
      *    type="object",
-     *    schema="v4_highlights_index",
+     *    schema="v4_internal_highlights_index",
      *    description="The v4 highlights index response. Note the fileset_id is being used to identify the item instead of the bible_id.
      *    This is important as different filesets may have different numbers for the highlighted words field depending on their revision.",
-     *    title="v4_highlights_index",
-     *    @OA\Xml(name="v4_highlights_index"),
+     *    title="v4_internal_highlights_index",
+     *    @OA\Xml(name="v4_internal_highlights_index"),
      *      allOf={
      *        @OA\Schema(ref="#/components/schemas/pagination.alternate"),
      *      },
@@ -135,6 +135,7 @@ class UserHighlightsTransformer extends BaseTransformer
                           .  $bible_id . '/verses?v=4&key=' . $content_config['key']);
                         return json_decode($res->getBody() . '', true);
                     });
+
                     if (isset($bible_verse_text['books'])) {
                         // make book_id to book_data lookup map
                         $bible_book_verses_map = array();

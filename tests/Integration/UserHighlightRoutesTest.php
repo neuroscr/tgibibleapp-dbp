@@ -52,7 +52,6 @@ class UserHighlightTest extends ApiV4Test
         $this->assertEquals(1, $result[0]['id']); // first id
     }
 
-
     /**
      * @category V4_API
      * @category Route Name: v4_highlights.index

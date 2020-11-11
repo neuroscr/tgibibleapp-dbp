@@ -520,9 +520,8 @@ class BibleFileSetsController extends APIController
         return $fileset_chapters;
     }
 
-    private function getHLSPlaylistItemText($hls_item, &$signed_files,
-      &$playlist_items, &$durations, $item_id, $transaction_id, $content_config,
-      $download)
+    private function getHLSPlaylistItemText($hls_item, &$playlist_items,
+      &$durations, $item_id, $download)
     {
         $playlist_entry = '';
         $playlist_entry .= "\n#EXTINF:" . $hls_item['duration'] . "," . $item_id;
@@ -530,33 +529,20 @@ class BibleFileSetsController extends APIController
             $playlist_entry .= "\n#EXT-X-BYTERANGE:" . $hls_item['bytes'] . '@'
               . $hls_item['offset'];
         }
-        $file_path = 'audio/' . $hls_item['path'] . '/' . $hls_item['fileset_id']
-          . '/' . $hls_item['file_name'];
-        if (!isset($signed_files[$file_path])) {
-            // authorizeAWS
-            // only enable on FCBH
-            if (empty($content_config['url'])) {
-                $signed_files[$file_path] = $this->signedUrl(
-                  $file_path, $hls_item['asset_id'], $transaction_id
-                );
-            } else {
-                // TGI workaround for testing without access to FCBH (Iam role denied)
-                $signed_files[$file_path] = $file_path;
-            }
-        }
-        $hls_file_path = $download ? $file_path : $signed_files[$file_path];
+        $hls_file_path = $download ? $hls_item['file_path'] : $hls_item['signed_file'];
         $playlist_entry .= "\n" . $hls_file_path;
         $playlist_items[] = $playlist_entry;
         $durations[] = $hls_item['duration'];
     }
 
     // per item which has many hls_item sets
-    public function getHLSPlaylistText($hls_items, &$signed_files,
-      &$playlist_items, &$durations, $transaction_id, $item, $download)
+    public function getHLSPlaylistText($hls_items, &$playlist_items, &$durations,
+      $item, $download)
     {
         // probably don't need position here...
-        $fields = array('duration', 'position', 'bytes', 'offset', 'fileset_id',
-          'asset_id', 'file_name', 'path');
+        $fields = array(
+          'duration', 'position', 'bytes', 'offset', 'file_path', 'signed_file'
+        );
         $content_config = config('services.content');
         foreach($hls_items as $hls_item) {
             // per type processing
@@ -586,17 +572,15 @@ class BibleFileSetsController extends APIController
                 foreach($subitems as $subitem) {
                     $patched_item = $hls_item;
                     foreach($fields as $f) {
-                      $patched_item[$f] = $subitem[$f];
+                        $patched_item[$f] = $subitem[$f];
                     }
-                    $this->getHLSPlaylistItemText($patched_item, $signed_files,
-                      $playlist_items, $durations, $item->id, $transaction_id,
-                      $content_config, $download);
+                    $this->getHLSPlaylistItemText($patched_item, $playlist_items,
+                      $durations, $item->id, $download);
                 }
             } else {
                 // mp3 type
-                $this->getHLSPlaylistItemText($hls_item, $signed_files,
-                  $playlist_items, $durations, $item->id, $transaction_id,
-                  $content_config, $download);
+                $this->getHLSPlaylistItemText($hls_item, $playlist_items, $durations,
+                  $item->id, $download);
             }
         }
     }

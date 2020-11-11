@@ -32,7 +32,6 @@ Route::name('v4_bible.copyright')->get('bibles/{bible_id}/copyright',           
 Route::name('v4_bible.getAudio')->get('bibles/{bible_id?}/audio',                  'Bible\BiblesController@getAudio');
 Route::name('v4_bible.getFilesetVernacularMetaData')->get('bibles/{bible_id?}/books/{book_id?}/testament/{testament}',                  'Bible\BiblesController@getFilesetVernacularMetaData');
 
-Route::name('v4_bible.chapter')
 Route::name('v4_internal_bible.chapter')
     ->middleware('APIToken')->get('bibles/{bible_id}/chapter',                     'Bible\BiblesController@chapter');
 Route::name('v4_internal_bible.chapter.annotations')

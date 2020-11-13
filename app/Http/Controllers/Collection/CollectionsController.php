@@ -568,7 +568,7 @@ class CollectionsController extends APIController
         // default to hide items per Johan
         $show_items = checkBoolean('show_items');
         $show_text = checkBoolean('show_text');
-        $hide_hls = checkBoolean('hide_hls') ?? false;
+        $hide_hls = checkBoolean('hide_hls');
         $iso = checkParam('iso');
         if ($show_text) {
             $show_details = $show_text;
@@ -591,6 +591,7 @@ class CollectionsController extends APIController
             return array(
               'playlist_id' => $colPlaylist['playlist_id'],
               'name'        => $playlist->name,
+              // Possible fields we may want to include in the future
               // featured, user_id, plan_id, following, draft?
               'language_id' => $playlist->language_id,
               'item_count'       => $playlist->items ? $playlist->items->count() : 0,

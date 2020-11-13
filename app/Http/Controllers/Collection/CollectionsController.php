@@ -539,13 +539,25 @@ class CollectionsController extends APIController
      *          name="show_details",
      *          in="query",
      *          @OA\Schema(type="boolean"),
+     *          description="Give full details of the playlist"
+     *     ),
+     *     @OA\Parameter(
+     *          name="show_items",
+     *          in="query",
+     *          @OA\Schema(type="boolean"),
      *          description="Give full details of the plan"
      *     ),
      *     @OA\Parameter(
      *          name="show_text",
      *          in="query",
      *          @OA\Schema(type="boolean"),
-     *          description="Enable the full details of the plan and retrieve the text of the playlists items"
+     *          description="Enable the verse_text of the playlists and retrieve the text of the playlists items"
+     *     ),
+     *     @OA\Parameter(
+     *          name="iso",
+     *          in="query",
+     *          @OA\Schema(ref="#/components/schemas/Language/properties/iso"),
+     *          description="The iso code to filter collections by. For a complete list see the `iso` field in the `/languages` route"
      *     ),
      *     @OA\Response(response=200, ref="#/components/responses/plan")
      * )
@@ -572,29 +584,58 @@ class CollectionsController extends APIController
         }
 
         $show_details = checkBoolean('show_details');
+        // default to hide items per Johan
+        $show_items = checkBoolean('show_items');
         $show_text = checkBoolean('show_text');
+        $iso = checkParam('iso');
         if ($show_text) {
             $show_details = $show_text;
         }
 
+        $language_id = '';
+        if ($iso) {
+            $language_id = cacheRemember('v4_language_id_from_iso', [$iso], now()->addDay(), function () use ($iso) {
+                return optional(Language::where('iso', $iso)->select('id')->first())->id;
+            });
+        }
+
+        $playlist_controller = new PlaylistsController();
+
+        $result = $collection->toArray();
+
+        // filter collection, strip items
+        $result['playlists'] = collect($result['playlists'])->filter(
+          function($colPlaylist) use ($iso, $language_id, $show_items, $playlist_controller, $user) {
+            // if filtering by language
+            if ($iso) {
+                // get playlist language
+                $playlist = $playlist_controller->getPlaylist($user, $colPlaylist['playlist_id']);
+                if ($playlist->language_id !== $language_id) {
+                    return false;
+                }
+            }
+            return true;
+        })->toArray();
+
         if ($show_details) {
-            $playlist_controller = new PlaylistsController();
             // get those playlists
-            $playlists = $collection->playlists;
-            foreach($playlists as $colPlaylist) {
-                $playlist = $playlist_controller->getPlaylist($user, $colPlaylist->playlist_id);
-                $playlist->path = route('v4_playlists.hls', ['playlist_id'  => $colPlaylist->playlist_id, 'v' => $this->v, 'key' => $this->key]);
-                if ($show_text) {
+            foreach($result['playlists'] as $i => $playlistRow) {
+                $playlist = $playlist_controller->getPlaylist($user, $playlistRow['playlist_id']);
+                if (!$show_items) {
+                    // rehide items
+                    unset($playlist->items);
+                }
+                $playlist->path = route('v4_playlists.hls', ['playlist_id'  => $playlistRow['playlist_id'], 'v' => $this->v, 'key' => $this->key]);
+                if ($show_items && $show_text) {
                     foreach ($playlist->items as $item) {
                         $item->verse_text = $item->getVerseText();
                     }
                 }
-                $colPlaylist->playlist = $playlist;
+                $result['playlists'][$i] = $playlist;
             }
-            $collection->playlists = $playlists;
         }
 
-        return $this->reply($collection);
+        return $this->reply($result);
     }
 
     /**

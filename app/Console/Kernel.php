@@ -50,6 +50,8 @@ class Kernel extends ConsoleKernel
         Commands\translatePlaylist::class,
         Commands\encryptNote::class,
 
+        Commands\SyncCollectionsPlaylists::class,
+
         Commands\syncPlaylistDuration::class,
         Commands\DeleteDraftPlaylistsPlans::class,
         Commands\DeleteTemporaryZipFiles::class,

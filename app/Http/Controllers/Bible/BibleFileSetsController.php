@@ -128,27 +128,91 @@ class BibleFileSetsController extends APIController
         return $this->reply($fileset_chapters, [], $transaction_id ?? '');
     }
 
-    public function showFeatured($id = null, $asset_id = null, $set_type_code = null, $cache_key = 'bible_filesets_show2')
+    // from getVerseText
+    public function bibleVerses($fileset_id)
     {
-        // get fileset
-        $fileset = BibleFileset::where('id', $id)->first();
-        // load text_plain for this bible
-        $text_fileset = $fileset->bible->first()->filesets->where('set_type_code', 'text_plain')->first();
-        // back up hash_id
-        $hash_id = $text_fileset->hash_id;
-        // copy text_fileset
-        $text_fileset_copy = json_decode(json_encode($text_fileset));
-        // expose hash_id
-        $text_fileset_copy->hash_id = $hash_id;
-        // return text_plain for this bible including hash_id
-        return $this->reply($text_fileset_copy, [], '');
+        $book_id = checkParam('book_id'); // can be all, specified or omitted for none
+        $chapter = checkParam('chapter_id|chapter');
+        $chapter_start = checkParam('chapter_start');
+        $chapter_end   = checkParam('chapter_end');
+        $verse_start   = checkParam('verse_start');
+        $verse_end     = checkParam('verse_end');
+
+        // get first bible via fileset
+        // used join logic from PlaylistItems::getVerseText
+        $bible = BibleFileset::where('id', $fileset_id)->first()->bible->first();
+
+        // workhose query
+        $result = Bible::where('bibles.id', '=', $bible->id)
+          ->join('bible_books', 'bible_books.bible_id', 'bibles.id')
+          ->leftjoin('books', 'books.id', 'bible_books.book_id')
+          ->join('bible_fileset_connections as connection', 'connection.bible_id', 'bible_books.bible_id')
+          ->join('bible_filesets as filesets', function ($join) {
+            $join->on('filesets.hash_id', '=', 'connection.hash_id');
+          })
+          ->where('filesets.set_type_code', 'text_plain')
+          ->join('bible_verses as bible_verses', function ($join) {
+            $join->on('connection.hash_id', '=', 'bible_verses.hash_id')
+              ->where('bible_verses.book_id', '=', DB::raw('bible_books.book_id'));
+          })
+          ->when($book_id && $book_id !== 'all', function ($query) use ($book_id) {
+              return $query->where('bible_books.book_id', $book_id);
+          })
+          ->when($chapter, function ($query) use ($chapter) {
+              return $query->where('bible_verses.chapter', $chapter);
+          })
+          ->when($chapter_start, function ($query) use ($chapter_start) {
+              return $query->where('bible_verses.chapter', '>=', $chapter_start);
+          })
+          ->when($chapter_end, function ($query) use ($chapter_end) {
+              return $query->where('bible_verses.chapter', '<=', $chapter_end);
+          })
+          ->when($verse_start, function ($query) use ($verse_start) {
+              return $query->where('bible_verses.verse_start', '>=', $verse_start);
+          })
+          ->when($verse_end, function ($query) use ($verse_end) {
+              return $query->where('bible_verses.verse_end',   '<=', $verse_end);
+          })
+          ->select(['bibles.versification', 'bible_books.bible_id',
+            'bible_books.book_id', 'books.book_testament', 'bible_books.name',
+            'chapter', 'verse_start', 'verse_end', 'verse_text'])->get();
+
+        $books = array();
+        // bandwidth optimize nested results
+        if ($book_id) {
+          $books = array();
+          foreach($result as $row) {
+            $book_key = $row->book_id . '_'. $row->book_testament . '_'. $row->name;
+            if (!isset($books[$book_key])) {
+              $books[$book_key] = array(
+                'book_id'   => $row->book_id,
+                'name'      => $row->name,
+                'testament' => $row->book_testament,
+                'verses'    => array()
+              );
+            }
+            $books[$book_key]['verses'][] = array(
+              $row->chapter,
+              $row->verse_start,
+              $row->verse_end,
+              $row->verse_text,
+            );
+          }
+        }
+
+        // throw bible level stuff up top
+        return $this->reply(array(
+          'bible_id'      => $bible->id,
+          'versification' => $bible->versification,
+          'books'         => array_values($books),
+        ), [], '');
     }
-  
-    public function getPlaylistMeta($id = null, $asset_id = null, $set_type_code = null, $cache_key = 'bible_filesets_show2')
+
+    public function getPlaylistMeta()
     {
         // laravel pass array from route to controller
         // https://stackoverflow.com/a/47695952/287696
-        $filesets = explode(',', checkParam('fileset_id', true, $id));
+        $filesets = explode(',', checkParam('fileset_id'));
 
         // lookup filesets and get hashes
         $filesets_hashes = DB::connection('dbp')

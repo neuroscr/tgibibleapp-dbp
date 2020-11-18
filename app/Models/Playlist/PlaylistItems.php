@@ -341,11 +341,8 @@ class PlaylistItems extends Model implements Sortable
         // if configured to use content server
         if (!empty($content_config['url'])) {
             // use content server
-            $fileset_id = $this['fileset_id'];
 
-            // FIXME: cache this...
             $cache_params = [$this['fileset_id'], $this['book_id'], $this['chapter_start'], $this['chapter_end'], $this['verse_start'], $this['verse_end']];
-
             $verses = cacheRemember('playlist_item_text_by_fileset', $cache_params, now()->addDay(), function () use ($content_config) {
                 $client = new Client();
                 $addl = '';

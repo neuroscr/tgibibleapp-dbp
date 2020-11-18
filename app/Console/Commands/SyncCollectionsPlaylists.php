@@ -68,6 +68,7 @@ class SyncCollectionsPlaylists extends Command
         return $collRow[0]->id;
     }
 
+    // for every playlist we create, we need to link it to a collection
     private function ensurePlaylistCollection($collection_id, $playlist_id)
     {
         // find link
@@ -86,6 +87,7 @@ class SyncCollectionsPlaylists extends Command
         return $collRow[0]->id;
     }
 
+    // this also ensures a collection playlist for this playlist
     private function ensurePlaylist($collection_id, $name, $language_id = 6414)
     {
         // find playlist
@@ -203,6 +205,7 @@ class SyncCollectionsPlaylists extends Command
               if (!$language_id) {
                   echo "[$collection_id] Can't find [$lang]\n";
                   $notfound++;
+                  continue;
               }
               // we need this id for the playlist item fileset lookup
               if ($lang === 'ro') $lang = 'ro-RO';
@@ -210,7 +213,9 @@ class SyncCollectionsPlaylists extends Command
               if (!$langBible_id) {
                   echo "[$collection_id] Can't find default bible for [$lang]\n";
                   $notfound++;
+                  continue;
               }
+              // can we use a langBible_id to get a language?
           }
 
           unset($row['language']);
@@ -228,6 +233,7 @@ class SyncCollectionsPlaylists extends Command
               if (!$this->ensurePlaylistItems($en_playlist_id, $playlist_id, $langBible_id)) {
                   echo "Aborting, please find the correct english(6414) title for playlist_id($en_playlist_id) and fix the [$collection_id] csv\n";
                   echo "Incorrect title[$en_title]\n";
+                  exit();
               }
           }
         }

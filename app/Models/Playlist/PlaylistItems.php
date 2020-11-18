@@ -334,49 +334,78 @@ class PlaylistItems extends Model implements Sortable
 
     public function getVerseText($text_filesets = null)
     {
-        if ($text_filesets) {
-            $text_fileset = $text_filesets[$this['fileset_id']][0] ?? null;
-            $hash_id = $text_fileset->hash_id;
-        } else {
-            $config = config('services.content');
-            // if configured to use content server
-            if (!empty($config['url'])) {
+        // no specific filesets, use $this['fileset_id']
 
-              $fileset_id = $this['fileset_id'];
-              $cache_params = [$fileset_id];
-              $text_fileset = cacheRemember('playlist_item_fileset_content_verses', $cache_params, now()->addDay(), function () use ($fileset_id, $config) {
-                  $client = new Client();
-                  $res = $client->get($config['url'] . 'bibles/filesets/'.
-                    $fileset_id.'/verses?v=4&key=' . $config['key']);
-                  return collect(json_decode($res->getBody() . ''));
-              });
-              $hash_id = $text_fileset['hash_id'];
-            } else {
-              $fileset = BibleFileset::where('id', $this['fileset_id'])->first();
-              $text_fileset = $fileset->bible->first()->filesets->where('set_type_code', 'text_plain')->first();
-              $hash_id = $text_fileset->hash_id;
-            }
-        }
+        $content_config = config('services.content');
+        // if configured to use content server
+        if (!empty($content_config['url'])) {
+            // use content server
+            $fileset_id = $this['fileset_id'];
 
-        $verses = null;
-        if ($hash_id) {
-            $where = [
-                ['book_id', $this['book_id']],
-                ['chapter', '>=', $this['chapter_start']],
-                ['chapter', '<=', $this['chapter_end']],
-            ];
-            if ($this['verse_start'] && $this['verse_end']) {
-                $where[] = ['verse_start', '>=', $this['verse_start']];
-                $where[] = ['verse_end', '<=', $this['verse_end']];
-            }
-            $cache_params = [$hash_id, $this['book_id'], $this['chapter_start'], $this['chapter_end'], $this['verse_start'], $this['verse_end']];
-            $verses = cacheRemember('playlist_item_text', $cache_params, now()->addDay(), function () use ($hash_id, $where) {
-                return BibleVerse::where('hash_id', $hash_id)
-                    ->where($where)
-                    ->get()->pluck('verse_text');
+            // FIXME: cache this...
+            $cache_params = [$this['fileset_id'], $this['book_id'], $this['chapter_start'], $this['chapter_end'], $this['verse_start'], $this['verse_end']];
+
+            $verses = cacheRemember('playlist_item_text_by_fileset', $cache_params, now()->addDay(), function () use ($content_config) {
+                $client = new Client();
+                $addl = '';
+                if ($this['verse_start'] && $this['verse_end']) {
+                    $addl = '&verse_start='.$this['verse_start'] .
+                      '&verse_end='  .$this['verse_end'];
+                }
+                $res = $client->get($content_config['url'] . 'bibles/filesets/' .
+                    $this['fileset_id'] . '/verses?v=4&key=' . $content_config['key'] .
+                    '&book_id=' . $this['book_id'] .
+                    '&chapter_start='.$this['chapter_start'] .
+                    '&chapter_end='  .$this['chapter_end'] .
+                    $addl
+                );
+                $results = json_decode($res->getBody() . '', true);
+                $verses = array();
+                if (count($results['books'])) {
+                    // first book since we queried by book_id
+                    foreach($results['books'][0]['verses'] as $varr) {
+                      $verses[] = $varr[3];
+                    }
+                }
+                return $verses;
             });
-        }
 
+        } else {
+            // content is local
+
+            // cache passed in?
+            if ($text_filesets) {
+                // avoid the BibleFileset query by using passed in cache
+                $hash_id = $text_filesets[$this['fileset_id']][0]->hash_id ?? null;
+            } else {
+                // look up (text_plain) hash_id for this fileset_id
+                $hash_id = BibleFileset::where('id', $this['fileset_id'])->first()
+                  ->bible->first()
+                  ->filesets->where('set_type_code', 'text_plain')->first()
+                  ->hash_id;
+            }
+
+            $verses = null;
+            if ($hash_id) {
+                $where = [
+                    ['book_id', $this['book_id']],
+                    ['chapter', '>=', $this['chapter_start']],
+                    ['chapter', '<=', $this['chapter_end']],
+                ];
+                // optional clause
+                if ($this['verse_start'] && $this['verse_end']) {
+                    $where[] = ['verse_start', '>=', $this['verse_start']];
+                    $where[] = ['verse_end', '<=', $this['verse_end']];
+                }
+                // $hash_id and expand $where
+                $cache_params = [$hash_id, $this['book_id'], $this['chapter_start'], $this['chapter_end'], $this['verse_start'], $this['verse_end']];
+                $verses = cacheRemember('playlist_item_text', $cache_params, now()->addDay(), function () use ($hash_id, $where) {
+                    return BibleVerse::where('hash_id', $hash_id)
+                        ->where($where)
+                        ->get()->pluck('verse_text');
+                });
+            }
+        }
         return $verses;
     }
 
@@ -397,7 +426,8 @@ class PlaylistItems extends Model implements Sortable
             $bible_files = BibleFile::where('hash_id', $fileset->hash_id)
                 ->when($book, function ($query) use ($book) {
                     return $query->where('book_id', $book);
-                })->where('chapter_start', '>=', $chapter_start)
+                })
+                ->where('chapter_start', '>=', $chapter_start)
                 ->where('chapter_end', '<=', $chapter_end)
                 ->get();
 

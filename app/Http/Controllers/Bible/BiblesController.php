@@ -21,12 +21,15 @@ use App\Models\Bible\BibleDefault;
 use App\Models\Bible\BibleFile;
 use App\Models\Bible\BibleFileset;
 use App\Models\Bible\BibleFileTimestamp;
+use App\Models\Bible\BibleVerse;
 use App\Models\Bible\Book;
 use App\Models\Language\Language;
+use Illuminate\Support\Facades\DB;
 use Exception;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use ZipArchive;
 
 class BiblesController extends APIController
@@ -47,67 +50,51 @@ class BiblesController extends APIController
      *          name="language_code",
      *          in="query",
      *          @OA\Schema(ref="#/components/schemas/Language/properties/iso"),
-     *          description="The iso code to filter results by. This will return results only in the language specified.
-     *          For a complete list see the `iso` field in the `/languages` route",
+     *          description="The iso code to filter results by. This will return results only in the language specified. For a complete list see the `iso` field in the `/languages` route",
      *     ),
      *     @OA\Parameter(
      *          name="organization_id",
      *          in="query",
-     *          @OA\Schema(type="string"),
+     *          @OA\Schema(ref="#/components/schemas/Organization/properties/id"),
      *          description="The owning organization to return bibles for. For a complete list of ids see the route
      *              `/organizations`."
      *     ),
      *     @OA\Parameter(
      *          name="asset_id",
      *          in="query",
-     *          @OA\Schema(type="string"),
-     *          description="The asset_id to filter results by. There are three buckets provided `dbp-prod`, `dbp-vid` & `dbs-web`"
+     *          @OA\Schema(ref="#/components/schemas/Asset/properties/id"),
+     *          description="The asset_id to filter results by"
      *     ),
      *     @OA\Parameter(
      *          name="media",
      *          in="query",
-     *          @OA\Schema(type="string"),
+     *          @OA\Property(ref="#/components/schemas/BibleFilesetType/properties/set_type_code"),
      *          description="Will filter bibles based upon the media type of their filesets"
      *     ),
      *     @OA\Parameter(
      *          name="media_exclude",
      *          in="query",
-     *          @OA\Schema(type="string"),
+     *          @OA\Property(ref="#/components/schemas/BibleFilesetType/properties/set_type_code"),
      *          description="Will exclude bibles based upon the media type of their filesets"
      *     ),
      *     @OA\Parameter(
      *          name="size",
      *          in="query",
-     *          @OA\Schema(type="string"),
+     *          @OA\Property(ref="#/components/schemas/BibleFilesetSize/properties/set_size_code"),
      *          description="Will filter bibles based upon the size type of their filesets"
-     *     ),
-     *     @OA\Parameter(
-     *          name="bitrate",
-     *          in="query",
-     *          @OA\Schema(type="string",example="64kps"),
-     *          description="Will filter bibles based upon the bitrate of their filesets, the current values available are 16kbps & 64kbps"
      *     ),
      *     @OA\Parameter(
      *          name="size_exclude",
      *          in="query",
-     *          @OA\Schema(type="string"),
+     *          @OA\Property(ref="#/components/schemas/BibleFilesetSize/properties/set_size_code"),
      *          description="Will exclude bibles based upon the size type of their filesets"
-     *     ),
-     *     @OA\Parameter(
-     *          name="show_all",
-     *          in="query",
-     *          @OA\Schema(type="boolean"),
-     *          description="Will show all entries"
      *     ),
      *     @OA\Parameter(ref="#/components/parameters/page"),
      *     @OA\Parameter(ref="#/components/parameters/limit"),
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_bible.all")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(ref="#/components/schemas/v4_bible.all")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(ref="#/components/schemas/v4_bible.all")),
-     *         @OA\MediaType(mediaType="text/csv",         @OA\Schema(ref="#/components/schemas/v4_bible.all"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_bible.all"))
      *     )
      * )
      *
@@ -229,15 +216,13 @@ class BiblesController extends APIController
      *     @OA\Parameter(
      *          name="asset_id",
      *          in="query",
-     *          @OA\Schema(type="string"),
-     *          description="The asset_id to filter results by. There are three buckets provided `dbp-prod`, `dbp-vid` & `dbs-web`"
+     *          @OA\Schema(ref="#/components/schemas/Asset/properties/id"),
+     *          description="The asset_id to filter results by. "
      *     ),
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_bible.one")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(ref="#/components/schemas/v4_bible.one")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(ref="#/components/schemas/v4_bible.one"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_bible.one"))
      *     )
      * )
      *
@@ -272,15 +257,124 @@ class BiblesController extends APIController
         return $this->reply(fractal($bible, new BibleTransformer(), $this->serializer));
     }
 
+    public function showName($id, $language)
+    {
+        $bible = cacheRemember('bible_with_translations', [$id], now()->addDay(), function () use ($id) {
+            return Bible::whereId($id)->with(['translations'])->first();
+        });
+        if (!$bible) {
+            return $this->setStatusCode(404)->replyWithError(trans('api.bibles_errors_404', ['bible_id' => $id]));
+        }
+        $ctitle = optional($bible->translations->where('language_id', $language)->first())->name;
+        $vtitle = optional($bible->vernacularTranslation)->name;
+
+        return $this->reply($vtitle ? $vtitle : $ctitle);
+    }
+
+    public function verseSearch($bible_id, $query)
+    {
+        // query plan based on
+        // 2k bibles
+        // 60k biblebooks
+        // 1.5k filesets
+        // 6k connections
+        // 16m verses
+        $q = Bible::join('bible_books', 'bible_books.bible_id', 'bibles.id')
+          ->where('bibles.id', '=', $bible_id)
+          ->join('bible_fileset_connections as connection', 'connection.bible_id', 'bibles.id')
+          ->join('bible_filesets as filesets', function ($join) {
+            $join->on('filesets.hash_id', '=', 'connection.hash_id');
+          })
+          ->where('filesets.set_type_code', 'text_plain')
+          ->join('bible_verses as bible_verses', function ($join) {
+            $join->on('connection.hash_id', '=', 'bible_verses.hash_id');
+          })
+          ->where('bible_verses.verse_text', 'like', '%' . $query . '%')
+          ->select(['bible_books.book_id', 'chapter', 'verse_start', 'verse_end']);
+        return $this->reply($q->get());
+    }
+
+    public function BibleVerses($bible_id)
+    {
+        // This query plan was based on the following query having 3-31k records
+        $q = Bible::where('bibles.id', '=', $bible_id)
+          ->join('bible_books', 'bible_books.bible_id', 'bibles.id')
+          ->leftjoin('books', 'books.id', 'bible_books.book_id')
+          ->join('bible_fileset_connections as connection', 'connection.bible_id', 'bible_books.bible_id')
+          ->join('bible_filesets as filesets', function ($join) {
+            $join->on('filesets.hash_id', '=', 'connection.hash_id');
+          })
+          ->where('filesets.set_type_code', 'text_plain')
+          ->join('bible_verses as bible_verses', function ($join) {
+            $join->on('connection.hash_id', '=', 'bible_verses.hash_id')
+              ->where('bible_verses.book_id', '=', DB::raw('bible_books.book_id'));
+          })
+          ->select(['bibles.versification', 'bible_books.book_id',
+            'chapter', 'verse_start', 'verse_end', 'verse_text', 'books.book_testament',
+            'bible_books.name']);
+        $bible = Bible::where('id', $bible_id)->first();
+        $biblebooks = $bible->books()->get();
+        $testament_audiosets = array();
+        foreach($biblebooks as $bb) {
+            $testament = $bb->book->book_testament;
+            $book_id = $bb->book_id;
+            $audio_fileset_types = collect([
+              'audio_stream_drama', 'audio_drama', 'audio_stream', 'audio'
+            ]);
+            $bible = Bible::where('id', $bible_id)->first();
+            $filesets = $bible->filesets;
+
+            $audio_filesets = $filesets->filter(function ($fs) {
+                return Str::contains($fs->set_type_code, 'audio');
+            });
+            // foreach audio fs type see if it's available
+            $available_filesets = $audio_fileset_types->map(function ($fileset) use ($audio_filesets, $testament) {
+                return $this->getFileset($audio_filesets, $fileset, $testament);
+            })->filter(function ($item) {
+                return $item;
+            })->toArray();
+            if (!isset($testament_audiosets[$book_id])) {
+                $testament_audiosets[$book_id] = array();
+            }
+            $testament_audiosets[$book_id][$testament] = array_values($available_filesets);
+        }
+
+        // one level of nesting by book could save some more bandwidth
+        // saves about 700k (4.9mb => 4.2mb)
+        $compressed = array();
+        $books = array();
+        foreach($q->get() as $row) {
+          $book_key = $row->book_id . '_'. $row->book_testament . '_'. $row->name;
+          if (!isset($books[$book_key])) {
+            $books[$book_key] = array(
+              'book_id'   => $row->book_id,
+              'name'      => $row->name,
+              'testament' => $row->book_testament,
+              'verses'    => array()
+            );
+          }
+          $books[$book_key]['verses'][] = array(
+            $row->chapter,
+            $row->verse_start,
+            $row->verse_end,
+            $row->verse_text,
+          );
+        }
+        $wrap = array(
+          'versification'  => $bible->versification,
+          'audio_filesets' => $testament_audiosets,
+          'books'          => array_values($books), // drop unique keying
+        );
+        return $this->reply($wrap);
+    }
+
     /**
      *
      * @OA\Get(
      *     path="/bibles/{id}/book",
      *     tags={"Bibles"},
      *     summary="Returns a list of translated book names and general information for the given Bible",
-     *     description="The actual list of books may vary from fileset to fileset. For example, a King James Fileset may
-     *          contain deuterocanonical books that are missing from one of it's sibling filesets nested within the bible
-     *          parent.",
+     *     description="The actual list of books may vary from fileset to fileset. For example, a King James Fileset may contain deuterocanonical books that are missing from one of it's sibling filesets nested within the bible parent.",
      *     operationId="v4_bible.books",
      *     @OA\Parameter(name="id",in="path",required=true,@OA\Schema(ref="#/components/schemas/Bible/properties/id")),
      *     @OA\Parameter(name="book_id",in="query", description="The book id. For a complete list see the `book_id` field in the `/bibles/books` route.",@OA\Schema(ref="#/components/schemas/Book/properties/id")),
@@ -294,10 +388,7 @@ class BiblesController extends APIController
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_bible.books")),
-     *         @OA\MediaType(mediaType="application/xml", @OA\Schema(ref="#/components/schemas/v4_bible.books")),
-     *         @OA\MediaType(mediaType="text/x-yaml", @OA\Schema(ref="#/components/schemas/v4_bible.books")),
-     *         @OA\MediaType(mediaType="text/csv", @OA\Schema(ref="#/components/schemas/v4_bible.books"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_bible.books"))
      *     )
      * )
      *
@@ -377,6 +468,49 @@ class BiblesController extends APIController
         return $this->reply(fractal($books, new BooksTransformer));
     }
 
+    public function bookSearch($query)
+    {
+        $books = BibleBook::where('name', 'like', '%'.$query.'%')->select(['bible_id', 'book_id'])->get();
+        // expose bible_id
+        $map = array();
+        foreach($books as $book) {
+          $book->setHidden([])->setVisible(['bible_id', 'book_id']);
+          // group this way to minimize bandwidth for large result sets
+          if (!isset($map[$book->bible_id])) {
+            $map[$book->bible_id] = array();
+          }
+          $map[$book->bible_id][] = $book->book_id;
+        }
+        return $this->reply($map);
+    }
+
+    public function bookVerse($bible_id, $book_id, $chapter, $verse_start)
+    {
+        $bible = Bible::where('id', $bible_id)->first();
+        $fileset = BibleFileset::join(
+          'bible_fileset_connections as connection',
+          'connection.hash_id',
+          'bible_filesets.hash_id'
+        )
+            ->where('bible_filesets.set_type_code', 'text_plain')
+            ->where('connection.bible_id', $bible->id)
+            ->first();
+              if (!$fileset) {
+                  return '';
+              }
+              $verses = BibleVerse::withVernacularMetaData($bible)
+            ->where('hash_id', $fileset->hash_id)
+            ->where('bible_verses.book_id', $book_id)
+            ->where('verse_start', $verse_start)
+            ->where('chapter', $chapter)
+            ->orderBy('verse_start')
+            ->select(['bible_verses.verse_text'])
+            ->get()
+            ->pluck('verse_text');
+
+        return $this->reply(implode(' ', $verses->toArray()));
+    }
+
     private function processActiveBooks($books, $active_books, $set_type_code)
     {
         foreach ($books as $book) {
@@ -396,16 +530,13 @@ class BiblesController extends APIController
      *     @OA\Parameter(
      *          name="language_code",
      *          in="query",
-     *          @OA\Schema(type="string",example="en"),
+     *          @OA\Schema(type="string",example="en", maxLength=6),
      *          description="The language code to filter results by"
      *     ),
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_bibles_defaults")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(ref="#/components/schemas/v4_bibles_defaults")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(ref="#/components/schemas/v4_bibles_defaults")),
-     *         @OA\MediaType(mediaType="text/csv",         @OA\Schema(ref="#/components/schemas/v4_bibles_defaults"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_bibles_defaults"))
      *     )
      * )
      *
@@ -463,10 +594,7 @@ class BiblesController extends APIController
      *     @OA\Response(
      *         response=200,
      *         description="The requested bible copyrights",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_bible.copyright")),
-     *         @OA\MediaType(mediaType="application/xml", @OA\Schema(ref="#/components/schemas/v4_bible.copyright")),
-     *         @OA\MediaType(mediaType="text/csv", @OA\Schema(ref="#/components/schemas/v4_bible.copyright")),
-     *         @OA\MediaType(mediaType="text/x-yaml", @OA\Schema(ref="#/components/schemas/v4_bible.copyright"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_bible.copyright"))
      *     )
      * )
      *
@@ -510,7 +638,7 @@ class BiblesController extends APIController
      *     tags={"Bibles"},
      *     summary="Bible chapter information",
      *     description="All bible chapter information",
-     *     operationId="v4_bible.chapter",
+     *     operationId="v4_internal_bible.chapter",
      *     security={{"api_token":{}}},
      *     @OA\Parameter(
      *          name="bible_id",
@@ -560,10 +688,7 @@ class BiblesController extends APIController
      *     @OA\Response(
      *         response=200,
      *         description="The requested bible chapter",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_bible.chapter")),
-     *         @OA\MediaType(mediaType="application/xml", @OA\Schema(ref="#/components/schemas/v4_bible.chapter")),
-     *         @OA\MediaType(mediaType="text/csv", @OA\Schema(ref="#/components/schemas/v4_bible.chapter")),
-     *         @OA\MediaType(mediaType="text/x-yaml", @OA\Schema(ref="#/components/schemas/v4_bible.chapter"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_bible.chapter"))
      *     )
      * )
      *
@@ -572,11 +697,6 @@ class BiblesController extends APIController
      *   schema="v4_bible.chapter",
      *   title="Bible chapter response",
      *   description="The v4 bible chapter response.",
-     *   @OA\Property(property="annotations", type="object",
-     *      @OA\Property(property="bookmarks", ref="#/components/schemas/v4_user_bookmarks/properties/data"),
-     *      @OA\Property(property="highlights", ref="#/components/schemas/v4_highlights_index/properties/data"),
-     *      @OA\Property(property="notes", ref="#/components/schemas/v4_notes_index/properties/data")
-     *   ),
      *   @OA\Property(property="bible_id", ref="#/components/schemas/Bible/properties/id"),
      *   @OA\Property(property="book_id", ref="#/components/schemas/Book/properties/id"),
      *   @OA\Property(property="chapter", ref="#/components/schemas/BibleFile/properties/chapter_start"),
@@ -766,13 +886,13 @@ class BiblesController extends APIController
             }
 
             $drama_all = $drama === 'all';
-            
+
             if ($drama === 'drama' || $drama_all) {
                 $chapter_filesets = $this->getAudioFilesetData($chapter_filesets, $bible, $book, $chapter, 'audio_drama', 'drama', $zip, 'audio', 'non_drama', !$drama_all && $zip);
 
                 if (!empty($user) && $zip && isset($chapter_filesets->audio->drama)) {
                     $fileset_id = $chapter_filesets->audio->drama['fileset']['id'];
-                
+
                     cacheRemember('v4_user_download', [$user->id, $fileset_id], now()->addDay(), function () use ($user, $fileset_id) {
                         UserDownload::create([
                     'user_id'        => $user->id,
@@ -782,7 +902,7 @@ class BiblesController extends APIController
                     });
                 }
             }
-            
+
             if ($drama === 'non-drama' || $drama_all) {
                 $chapter_filesets = $this->getAudioFilesetData($chapter_filesets, $bible, $book, $chapter, 'audio', 'non_drama', $zip, 'audio_drama', 'drama', !$drama_all && $zip);
 
@@ -893,6 +1013,47 @@ class BiblesController extends APIController
         return false;
     }
 
+    // is this a good name for this?
+    public function getFilesetVernacularMetaData($bible_id, $book_id, $testament) {
+        // testament is a set_size_code
+        // we maybe able to get testament via book_id
+
+        $bible = Bible::where('id', $bible_id)->first();
+        $filesets = $bible->filesets;
+        $text_fileset = $filesets->firstWhere('set_type_code', 'text_plain');
+
+        // get audio_filesets
+        $fileset_types = collect([
+            'audio_stream_drama', 'audio_drama', 'audio_stream', 'audio'
+        ]);
+
+        $audio_filesets = $filesets->filter(function ($fs) {
+            return Str::contains($fs->set_type_code, 'audio');
+        });
+        $available_filesets = $fileset_types->map(
+          function ($fileset) use ($audio_filesets, $testament) {
+            return $this->getFileset($audio_filesets, $fileset, $testament);
+        })->filter(function ($item) {
+            return $item;
+        })->toArray();
+
+        return $this->reply(collect(['text_fileset' => $text_fileset, 'audio_filesets' => array_values($available_filesets)]));
+    }
+
+    public function getAudio($bible_id) {
+        // save the db server the query(s)
+        $bible = cacheRemember('bible_translate', [$bible_id], now()->addDay(), function () use ($bible_id) {
+            return Bible::whereId($bible_id)->first();
+        });
+        $audio_fileset_types = collect(['audio_stream', 'audio_drama_stream', 'audio', 'audio_drama']);
+        $bible_audio_filesets = $bible->filesets->whereIn('set_type_code', $audio_fileset_types);
+
+        return $this->reply(array(
+            'language'=>$bible->language->name,
+            'audio'=>$bible_audio_filesets,
+        ));
+    }
+
     private function getAudioFilesetData($results, $bible, $book, $chapter, $type, $name, $download = false, $secondary_type, $secondary_name, $get_secondary = false)
     {
         $fileset_controller = new BibleFileSetsController();
@@ -975,7 +1136,7 @@ class BiblesController extends APIController
      *     tags={"Bibles"},
      *     summary="Bible chapter annotations",
      *     description="Bible chapter annotations",
-     *     operationId="v4_bible.chapter.annotations",
+     *     operationId="v4_internal_bible.chapter.annotations",
      *     security={{"api_token":{}}},
      *     @OA\Parameter(
      *          name="bible_id",
@@ -999,10 +1160,7 @@ class BiblesController extends APIController
      *     @OA\Response(
      *         response=200,
      *         description="The requested bible chapter annotations",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_bible.chapter.annotations")),
-     *         @OA\MediaType(mediaType="application/xml", @OA\Schema(ref="#/components/schemas/v4_bible.chapter.annotations")),
-     *         @OA\MediaType(mediaType="text/csv", @OA\Schema(ref="#/components/schemas/v4_bible.chapter.annotations")),
-     *         @OA\MediaType(mediaType="text/x-yaml", @OA\Schema(ref="#/components/schemas/v4_bible.chapter.annotations"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_bible.chapter.annotations"))
      *     )
      * )
      *
@@ -1011,18 +1169,28 @@ class BiblesController extends APIController
      *   schema="v4_bible.chapter.annotations",
      *   title="Bible chapter annotations response",
      *   description="The v4 bible chapter annotations response.",
-     *   @OA\Property(property="annotations", type="object",
-     *      @OA\Property(property="bookmarks", ref="#/components/schemas/v4_user_bookmarks/properties/data"),
-     *      @OA\Property(property="highlights", ref="#/components/schemas/v4_highlights_index/properties/data"),
-     *      @OA\Property(property="notes", ref="#/components/schemas/v4_notes_index/properties/data")
-     *   )
      * )
      */
     public function annotations(Request $request, $bible_id)
     {
-        $bible = Bible::whereId($bible_id)->first();
-        if (!$bible) {
-            return $this->setStatusCode(404)->replyWithError('Bible not found');
+        $content_config = config('services.content');
+        if (empty($content_config['url'])) {
+            $bible = Bible::whereId($bible_id)->first();
+            if (!$bible) {
+                return $this->setStatusCode(404)->replyWithError('Bible not found');
+            }
+        } else {
+            $map = cacheRemember('bible_exist', [$bible_id], now()->addDay(),
+              function () use ($bible_id, $content_config) {
+                $client = new Client();
+                $res = $client->get($content_config['url'] . 'bibles/'.
+                      $bible_id.'/name/'.$GLOBALS['i18n_id'].'?v=4&key=' . $content_config['key']);
+                $map = json_decode($res->getBody() . '', true);
+                return $map;
+            });
+            if ($map['error']) {
+                return $this->setStatusCode(404)->replyWithError('Bible not found');
+            }
         }
 
         $user = $request->user();
@@ -1052,14 +1220,17 @@ class BiblesController extends APIController
         $bookmarks_controller = new BookmarksController();
         $notes_controller = new NotesController();
         $request->request->add(['bible_id' => $bible_id]);
-        $result->highlights = $highlights_controller->index($request, $user->id)->original['data'];
+        if (empty($content_config['url'])) {
+            $result->highlights = $highlights_controller->index($request, $user->id)->original['data'];
+        } else {
+            $result->highlights = $highlights_controller->index($request, $user->id)->toArray();
+        }
         $result->bookmarks = $bookmarks_controller->index($request, $user->id)->original['data'];
         $result->notes = $notes_controller->index($request, $user->id)->original['data'];
 
         $result->bible_id = $bible->id;
         $result->book_id = $book_id;
         $result->chapter = $chapter;
-
 
         return $this->reply($result);
     }

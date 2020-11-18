@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Carbon\Carbon;
 use App\Models\User\User;
+use App\Relations\EmptyRelation;
 
 /**
  * App\Models\Playlist
@@ -34,7 +35,7 @@ class Playlist extends Model
 
     protected $connection = 'dbp_users';
     public $table         = 'user_playlists';
-    protected $fillable   = ['user_id', 'name', 'external_content', 'draft'];
+    protected $fillable   = ['user_id', 'name', 'external_content', 'draft', 'plan_id'];
     protected $hidden     = ['user_id', 'deleted_at', 'plan_id', 'language_id'];
     protected $dates      = ['deleted_at'];
     /**
@@ -170,6 +171,11 @@ class Playlist extends Model
 
     public function items()
     {
-        return $this->hasMany(PlaylistItems::class)->orderBy('order_column');
+        $content_config = config('services.content');
+        if (empty($content_config['url'])) {
+            return $this->hasMany(PlaylistItems::class)->orderBy('order_column');
+        } else {
+            return new EmptyRelation();
+        }
     }
 }

@@ -277,7 +277,9 @@ class BiblesController extends APIController
 
     public function showName($id, $language)
     {
-        $bible = Bible::whereId($id)->with(['translations'])->first();
+        $bible = cacheRemember('bible_with_translations', [$id], now()->addDay(), function () use ($id) {
+            return Bible::whereId($id)->with(['translations'])->first();
+        });
         if (!$bible) {
             return $this->setStatusCode(404)->replyWithError(trans('api.bibles_errors_404', ['bible_id' => $id]));
         }

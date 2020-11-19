@@ -239,6 +239,7 @@ class BibleTransformer extends BaseTransformer
                     'language_id'   => optional($bible->language)->id,
                     'iso'           => optional($bible->language)->iso,
                     'date'          => $bible->date,
+                    'versification' => $bible->versification,
                     'country'       => $bible->language->primaryCountry->name ?? '',
                     'books'         => $bible->books->sortBy('book.' . $bible->versification . '_order')->each(function ($book) {
                         // convert to integer array

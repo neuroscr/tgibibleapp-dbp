@@ -18,7 +18,6 @@ Route::name('v4_media_stream_ts')->get('bible/filesets/{fileset_id}/{book_id}-{c
 Route::name('v4_bible.books')->get('bibles/{bible_id}/book/{book?}',               'Bible\BiblesController@books');
 Route::name('v4_bible.bookSearch')->get('bibles/book/search/{query?}',                  'Bible\BiblesController@bookSearch');
 Route::name('v4_bible.bookVerse')->get('bibles/{bible_id}/book/{book_id?}/{chapter?}/{verse_start?}',           'Bible\BiblesController@bookVerse');
-Route::name('v4_bible.bookOrder')->get('bibles/book/order',                        'Bible\BooksController@getBookOrder');
 Route::name('v4_bible_equivalents.all')->get('bible/equivalents',                  'Bible\BibleEquivalentsController@index');
 Route::name('v4_bible.links')->get('bibles/links',                                 'Bible\BibleLinksController@index');
 Route::name('v4_bible_books_all')->get('bibles/books/',                            'Bible\BooksController@index');

@@ -52,21 +52,6 @@ class BooksController extends APIController
         return $this->reply($books);
     }
 
-    public function getBookOrder()
-    {
-        $book_order_query = cacheRemember('book_order_columns', [], now()->addDay(), function () {
-            // get the dbp.books order
-            $query = collect(Schema::connection('dbp')->getColumnListing('books'))->filter(function ($column) {
-                return strpos($column, '_order') !== false;
-            })->map(function ($column) {
-                return str_replace('_order', '', $column);
-                //return "IF(bibles.versification = '" . $name . "', books." . $name . '_order, 0)';
-            })->toArray();
-            return array_values($query);
-        });
-        return $this->reply($book_order_query);
-    }
-
     /**
      *
      * Returns the books and chapters for a specific fileset

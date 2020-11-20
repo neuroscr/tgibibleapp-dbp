@@ -190,56 +190,6 @@ class SyncCollectionsPlaylists extends Command
         return true;
     }
 
-    private function processCollection($collection_id, $records)
-    {
-        $notfound = 0;
-        foreach($records as $row) {
-          $lang = $row['language'];
-          if ($lang === 'Language Code') continue;
-          if ($lang === 'en-US' || $lang == 'en') {
-              // don't stomp the eng playlist we have...
-              continue;
-          } else {
-              // we need this id for the playlist
-              $language_id = $this->getLanguage($lang);
-              if (!$language_id) {
-                  echo "[$collection_id] Can't find [$lang]\n";
-                  $notfound++;
-                  continue;
-              }
-              // we need this id for the playlist item fileset lookup
-              if ($lang === 'ro') $lang = 'ro-RO';
-              $langBible_id = $this->getDefaultBibleLanguage($lang);
-              if (!$langBible_id) {
-                  echo "[$collection_id] Can't find default bible for [$lang]\n";
-                  $notfound++;
-                  continue;
-              }
-              // can we use a langBible_id to get a language?
-          }
-
-          unset($row['language']);
-          unset($row['What to Translate']); // Human readable language name
-          unset($row['Christian Character']); // tab...
-          unset($row['Help In Time of Need']); // tab...
-          unset($row['Help With Life\'s Problems']); // tab...
-          foreach($row as $en_title => $title) {
-              $en_playlist_id = $this->ensurePlaylist($collection_id, $en_title, 6414);
-
-              // so we need to ensure a playlist with this language and custom title
-              $playlist_id = $this->ensurePlaylist($collection_id, $title, $language_id);
-
-              // copy playlist_items from this playlist_id...
-              if (!$this->ensurePlaylistItems($en_playlist_id, $playlist_id, $langBible_id)) {
-                  echo "Aborting, please find the correct english(6414) title for playlist_id($en_playlist_id) and fix the [$collection_id] csv\n";
-                  echo "Incorrect title[$en_title]\n";
-                  exit();
-              }
-          }
-        }
-        echo "[$collection_id] Done Notfound [$notfound]\n";
-    }
-
     private function locateBook($name)
     {
         $fixUps = array(
@@ -289,6 +239,7 @@ class SyncCollectionsPlaylists extends Command
         delete from user_playlists where user_id = 1255627;
         delete from collection_playlists;
         */
+
         $collections_eng_path = storage_path("data/201104_CollectionPlaylistVerseMatrix.csv");
         $collections_eng = csvToArray($collections_eng_path);
         $missing = 0;
@@ -315,9 +266,55 @@ class SyncCollectionsPlaylists extends Command
             $this->ensurePlaylistItem($playlist_id, $book_id, $row['Chapter'], $row['VersesList']);
         }
         echo "Missing book records[$missing] Unique missing books[", count($missingBooks), "]\n";
-        // translate playlists
-        $this->processCollection(17, csvToArray(storage_path("data/201103_hiton17.csv")));
-        $this->processCollection(18, csvToArray(storage_path("data/201103_hwlp18.csv")));
-        $this->processCollection(19, csvToArray(storage_path("data/201103_cc19.csv")));
+
+        $collections_path = storage_path("data/AllTranslations-ByLanguageCode.csv");
+        $collections = csvToArray($collections_path);
+        foreach($collections as $row) {
+            // only interested in collections
+            if ($row['Grouping Type'] !== 'Collection') continue;
+            //print_r($row);
+            $collection_id = $this->ensureCollection($row['Grouping Name']);
+            $en_playlist_id = $this->ensurePlaylist($collection_id, $row['English Text to Translate'], 6414);
+
+
+            $keys = array_keys($row);
+            $lang = $row[$keys[0]]; // just grab the first field...
+            if ($lang === 'en-US' || $lang === 'en') continue; // don't need to translate english
+            if ($lang === 'es-MX') continue; // getLanguage fails on this
+            //if ($lang === 'es-MX') $lang = 'es'; // getLanguage fails on this
+            if ($lang === 'fr-CA') continue; // getLanguage fails on this
+            if ($lang === 'pt-BR') continue; // getLanguage fails on this
+            if ($lang === 'zh_TW') continue; // getLanguage fails on this
+
+            $en_title = $row['English Text to Translate'];
+
+            if ($en_title === 'Christian Character') continue; // has no items in playlist
+            if ($en_title === 'Help In Time of Need') continue; // has no items in playlist
+            if ($en_title === 'Help With Life\'s Problems') continue; // has no items in playlist
+
+            $language_id = $this->getLanguage($lang);
+            if (!$language_id) {
+                echo "[$collection_id] Can't find [$lang]\n";
+                exit();
+            }
+            if ($language_id === 6414) continue; // don't need to translate english
+
+            if ($lang === 'ro') $lang = 'ro-RO'; // fix up
+            $langBible_id = $this->getDefaultBibleLanguage($lang);
+            if (!$langBible_id) {
+                echo "[$collection_id] Can't find default bible for [$lang]\n";
+                exit();
+            }
+
+            // so we need to ensure a playlist with this language and custom title
+            $playlist_id = $this->ensurePlaylist($collection_id, $row['Translated Text'], $language_id);
+
+            // copy playlist_items from this playlist_id...
+            if (!$this->ensurePlaylistItems($en_playlist_id, $playlist_id, $langBible_id)) {
+                echo "Aborting, please find the correct english(6414) title for playlist_id($en_playlist_id) and fix the csv\n";
+                echo "Incorrect title[$en_title]\n";
+                exit();
+            }
+        }
     }
 }

@@ -272,7 +272,7 @@ class SyncCollectionsPlaylists extends Command
         foreach($collections as $row) {
             // only interested in collections
             if ($row['Grouping Type'] !== 'Collection') continue;
-            //print_r($row);
+
             $collection_id = $this->ensureCollection($row['Grouping Name']);
             $en_playlist_id = $this->ensurePlaylist($collection_id, $row['English Text to Translate'], 6414);
 
@@ -281,7 +281,6 @@ class SyncCollectionsPlaylists extends Command
             $lang = $row[$keys[0]]; // just grab the first field...
             if ($lang === 'en-US' || $lang === 'en') continue; // don't need to translate english
             if ($lang === 'es-MX') continue; // getLanguage fails on this
-            //if ($lang === 'es-MX') $lang = 'es'; // getLanguage fails on this
             if ($lang === 'fr-CA') continue; // getLanguage fails on this
             if ($lang === 'pt-BR') continue; // getLanguage fails on this
             if ($lang === 'zh_TW') continue; // getLanguage fails on this

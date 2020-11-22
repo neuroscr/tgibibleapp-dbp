@@ -35,7 +35,7 @@ class SyncCollectionsPlaylists extends Command
     {
         parent::__construct();
         $this->bible_id = 'ENGESV'; // should be ENGGID
-        $this->fileset_id = 'ENGESV'; // should be ENGGID?
+        $this->fileset_id = 'ENGESVN2SA'; // should be ENGGID?
         $this->user_id = 1255627; // my userid, the FK enforces this to be a valid user...
     }
 
@@ -279,17 +279,15 @@ class SyncCollectionsPlaylists extends Command
 
             $keys = array_keys($row);
             $lang = $row[$keys[0]]; // just grab the first field...
-            if ($lang === 'en-US' || $lang === 'en') continue; // don't need to translate english
-            if ($lang === 'es-MX') continue; // getLanguage fails on this
-            if ($lang === 'fr-CA') continue; // getLanguage fails on this
-            if ($lang === 'pt-BR') continue; // getLanguage fails on this
-            if ($lang === 'zh_TW') continue; // getLanguage fails on this
+            // don't need to translate english
+            // and skip langs that getLanguage fail on
+            $skip_langs = array('en', 'en-US', 'es-MX', 'fr-CA', 'pt-BR', 'zh_TW');
+            if (in_array($lang, $skip_langs)) continue;
 
             $en_title = $row['English Text to Translate'];
-
-            if ($en_title === 'Christian Character') continue; // has no items in playlist
-            if ($en_title === 'Help In Time of Need') continue; // has no items in playlist
-            if ($en_title === 'Help With Life\'s Problems') continue; // has no items in playlist
+            // these ahve no items in playlist
+            $skip_titles = array('Christian Character', 'Help In Time of Need', 'Help With Life\'s Problems');
+            if (in_array($en_title, $skip_titles)) continue;
 
             $language_id = $this->getLanguage($lang);
             if (!$language_id) {

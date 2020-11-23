@@ -206,7 +206,6 @@ class SyncCollectionsPlaylistsAndroid extends Command
 
     private function decodeChapterVerse($verse)
     {
-      //echo "[$verse]=";
       $parts = explode(' ', $verse);
       $book = array_shift($parts);
       // handle "1 Thess."
@@ -223,11 +222,9 @@ class SyncCollectionsPlaylistsAndroid extends Command
         $startstop = explode(':', $verses_part);
         $chapter = $startstop[0];
         $verses  = $this->commasDashes($startstop[1]);
-        //echo "[$book][$chapter][", join(',', $verses), "]\n";
       } else {
         $chapter = $verses_part;
         $verses = array();
-        //echo "[$book][$verses_part]\n";
       }
       return array(
         'book_id' => $book_id,
@@ -243,7 +240,6 @@ class SyncCollectionsPlaylistsAndroid extends Command
         DB::connection('dbp_users')->table('playlist_items')
           ->where('playlist_id', '=', $playlist_id)->delete();
 
-        //echo "Having to load [$playlist_id][$bible_id]\n";
         $book_id = $verse_data['book_id'];
         $chapter = $verse_data['chapter'];
         $verses  = $verse_data['verses'];
@@ -291,75 +287,27 @@ class SyncCollectionsPlaylistsAndroid extends Command
     private function readXML($language_id, $bible_id, $file, $collection_id)
     {
         $en_file = preg_replace('|values[A-Za-z-\.]+|', 'values', $file);
-        //echo "en_file[$en_file]\n";
         if (!file_exists($file)) {
           echo "[$language_id][$bible_id] $file not found\n";
           return;
         }
         echo $file, "\n";
 
-        /*
-        $en_xml = simplexml_load_file($en_file);
-        $en_playlists = array();
-        foreach($en_xml as $sa) {
-            $eng_collection_title = $sa['name'].'';
-            echo "eng_collection_title[$eng_collection_title]\n";
-            foreach($sa->item as $item) {
-                $json = json_decode(stripslashes($item).'', true);
-                // topic
-                // verses = ['weird bible code', 'weird bible code']
-                $en_playlists[$json['topic']] = array();
-                if (is_array($json['verses'])) {
-                    foreach($json['verses'] as $verse) {
-                        $en_playlists[$json['topic']][] = $this->decodeChapterVerse($verse);
-                    }
-                } else {
-                    echo "Verses is not an array\n";
-                    print_r($item);
-                    exit();
-                }
-            }
-        }
-        $en_playlists_names = array_keys($en_playlists);
-        print_r($en_playlists_names);
-        */
-
         $xml = simplexml_load_file($file);
         $playlists = array();
         foreach($xml as $sa) {
             $eng_collection_title = $sa['name'].'';
-            //echo "eng_collection_title[$eng_collection_title]\n";
             $i = 0;
             foreach($sa->item as $item) {
-                // we don't need the english name
-                /*
-                $en_playlist_title = $en_playlists_names[$i];
-                $fixUps = array(
-                  'Self-righteousness' => 'Self -Righteousness',
-                  'Caring for God\'s Creation' => 'Caring for God’s Creation',
-                  'Self-Control' => 'Self–Control',
-                );
-                if (isset($fixUps[$en_playlist_title])) {
-                    $en_playlist_title = $fixUps[$en_playlist_title];
-                }
-                $en_playlist_id = $this->ensurePlaylist($collection_id, $en_playlist_title, 6414, false);
-                if (!$en_playlist_id) {
-                    echo "Cant find 6414 playlist[$en_playlist_title]\n";
-                    exit();
-                }
-                */
 
                 // fix the one bad json line in the whole bunch
                 if ($item.'' === '{\"topic\":\"Sexe\":[\"Eph. 5:3, 4\",\"1 Thess. 4:3, 4\",\"2Tim 2:22\"]}') {
-                    //echo "Detected incorrect json\n";
                     $item = '{\"topic\":\"Sexe\",\"verses\":[\"Eph. 5:3, 4\",\"1 Thess. 4:3, 4\",\"2Tim 2:22\"]}';
                 }
                 $json = json_decode(stripslashes($item).'', true);
-                // topic
                 $title = $json['topic'];
                 $playlist_id = $this->ensurePlaylist($collection_id, $title, $language_id);
 
-                // verses = ['weird bible code', 'weird bible code']
                 $playlists[$json['topic']] = array(
                   'verses'=>array(),
                 );
@@ -379,7 +327,6 @@ class SyncCollectionsPlaylistsAndroid extends Command
         }
         // key is translated playlist name
         // values are verses in versespeak
-        //print_r($playlists);
         return $playlists;
     }
 
@@ -425,7 +372,6 @@ class SyncCollectionsPlaylistsAndroid extends Command
                 $trans = array();
                 while (($file = readdir($dh)) !== false) {
                     if ($file[0] === '.') continue;
-                    //echo "file[$file]\n";
                     if (strpos($file, 'values-') !== false) {
                         $parts = explode('-', $file);
                         $lang = array_pop($parts);
@@ -444,15 +390,12 @@ class SyncCollectionsPlaylistsAndroid extends Command
                         }
                         $strings_path = $dir . $file . '/strings.xml';
                         if (file_exists($strings_path)) {
-                            //$strings = file_get_contents($strings_path);
-                            //$xml = simplexml_load_string($strings);
                             $xml = simplexml_load_file($strings_path);
                             $trans[$lang] = array();
                             foreach($xml->string as $obj) {
                                 $name = $obj['name'].'';
                                 $trans[$lang][$name] = $obj.'';
                             }
-                            //print_r($trans[$lang]);
                         } else {
                             echo "No strings.xml for [$file]\n";
                             exit();
@@ -476,45 +419,7 @@ class SyncCollectionsPlaylistsAndroid extends Command
                     }
                 }
                 closedir($dh);
-                //print_r($trans);
             }
         }
-
-        /*
-        echo "\n\n\n";
-
-        $dir = "storage/data/main/assets/html/";
-
-        // Open a known directory, and proceed to read its contents
-        if (is_dir($dir)) {
-            if ($dh = opendir($dir)) {
-                while (($file = readdir($dh)) !== false) {
-                    if ($file[0] === '.') continue;
-                    if (strpos($file, '_') !== false) {
-                        $parts = explode('_', $file);
-                        $lang = array_shift($parts);
-                        echo $lang, '=>', $file, "\n";
-                        $language_id = $this->getLanguage($lang);
-                        if (!$language_id) {
-                            echo "Can't find[$lang]\n";
-                        }
-                        $bible_id = $this->getDefaultBibleLanguage($lang);
-                        if (!$bible_id) {
-                            echo "Can't find default bible for [$lang]\n";
-                            continue;
-                        }
-                        $data = file_get_contents($dir . $file);
-                        $matches = array();
-                        if (preg_match('|' . preg_quote('<h2>') . '([^<]+)' . preg_quote('</h2>'). '|', $data, $matches)) {
-                          $header = $matches[1];
-                        }
-                        //echo $data;
-                        //exit();
-                    }
-                }
-                closedir($dh);
-            }
-        }
-        */
     }
 }

@@ -51,6 +51,7 @@ class Kernel extends ConsoleKernel
         Commands\encryptNote::class,
 
         Commands\SyncCollectionsPlaylists::class,
+        Commands\SyncCollectionsPlaylistsAndroid::class,
 
         Commands\syncPlaylistDuration::class,
         Commands\DeleteDraftPlaylistsPlans::class,

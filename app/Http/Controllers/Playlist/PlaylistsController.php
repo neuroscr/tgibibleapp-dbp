@@ -1296,12 +1296,15 @@ class PlaylistsController extends APIController
         if (empty($config['url'])) {
             // local content
             $playlist->items = $playlist->items->map(function ($item) {
-                $bible = $item->fileset->bible->first();
-                if ($bible) {
-                    $item->bible_id = $bible->id;
+                $fileset = $item->fileset;
+                if ($fileset) {
+                    $bible = $fileset->bible->first();
+                    if ($bible) {
+                        $item->bible_id = $bible->id;
+                    }
+                    $item->set_type_code = $item->fileset->set_type_code;
+                    unset($item->fileset);
                 }
-                $item->set_type_code = $item->fileset->set_type_code;
-                unset($item->fileset);
                 return $item;
             });
         } else {

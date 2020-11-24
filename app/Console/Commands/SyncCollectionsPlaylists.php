@@ -172,8 +172,13 @@ class SyncCollectionsPlaylists extends Command
         }
 
         $result = $plc->translate_items($trg_bible_id, $srcList->items);
+        if ($result === -1) {
+            echo "trg_bible_id[$trg_bible_id] not found";
+            return;
+        }
         if (!is_object($result)) {
-            return $this->setStatusCode(404)->replyWithError('Bible Not Found');
+            echo "trg_bible_id[$trg_bible_id] not found";
+            return;
         }
         $translated_items = $result->translated_items;
         foreach($translated_items as $item) {

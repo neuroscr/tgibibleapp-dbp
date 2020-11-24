@@ -173,21 +173,21 @@ class SyncCollectionsPlaylists extends Command
 
         $result = $plc->translate_items($trg_bible_id, $srcList->items);
         if ($result === -1) {
-            echo "trg_bible_id[$trg_bible_id] not found";
+            echo "trg_bible_id[$trg_bible_id] not found\n";
             return;
         }
         if (!is_object($result)) {
-            echo "trg_bible_id[$trg_bible_id] not found";
+            echo "trg_bible_id[$trg_bible_id] not found\n";
             return;
         }
         $translated_items = $result->translated_items;
         foreach($translated_items as $item) {
-          // before we create it, make sure the fileset_id exists...
-          $bible = DB::connection('dbp')->table('bible_filesets')
-            ->where('id', '=', $item->fileset_id);
-          if (!$bible->count()) {
-            echo "Missing fileset_id[", $item->fileset_id, "]<br>\n";
-          }
+            // before we create it, make sure the fileset_id exists...
+            $bible = DB::connection('dbp')->table('bible_filesets')
+              ->where('id', '=', $item->fileset_id);
+            if (!$bible->count()) {
+                echo "Missing fileset_id[", $item->fileset_id, "]\n";
+            }
         }
 
         $dst = DB::connection('dbp_users')->table('user_playlists')

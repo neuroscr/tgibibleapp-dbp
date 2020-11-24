@@ -39,9 +39,11 @@ class SyncCollectionsPlaylists extends Command
         $this->user_id = 1255627; // my userid, the FK enforces this to be a valid user...
     }
 
+    // only used by english collection playlists
+    // this builds the items inside the newly created playlists
     private function ensurePlaylistItem($playlist_id, $book_id, $chapter, $verseList)
     {
-        // find playlist
+        // did we already create this playlist...
         $coll = DB::connection('dbp_users')->table('playlist_items')
           ->where('playlist_id', '=', $playlist_id)->where('book_id', '=', $book_id)
           ->where('fileset_id', '=', $this->fileset_id)
@@ -174,6 +176,14 @@ class SyncCollectionsPlaylists extends Command
             return $this->setStatusCode(404)->replyWithError('Bible Not Found');
         }
         $translated_items = $result->translated_items;
+        foreach($translated_items as $item) {
+          // before we create it, make sure the fileset_id exists...
+          $bible = DB::connection('dbp')->table('bible_filesets')
+            ->where('id', '=', $item->fileset_id);
+          if (!$bible->count()) {
+            echo "Missing fileset_id[", $item->fileset_id, "]<br>\n";
+          }
+        }
 
         $dst = DB::connection('dbp_users')->table('user_playlists')
           ->where('id', '=', $trg_playlist_id)->first();
@@ -185,7 +195,7 @@ class SyncCollectionsPlaylists extends Command
         // add to new playlist if not already there...
         $created_items = $plc->createTranslatedPlaylistItems($dst, $translated_items);
         if (!count($created_items)) {
-            echo "in[", $srcList->items->count(),"]($src_playlist_id) xlated[", count($translated_items), "]($trg_bible_id) out[", count($created_items), "]($trg_playlist_id)\n";
+            //echo "in[", $srcList->items->count(),"]($src_playlist_id) xlated[", count($translated_items), "]($trg_bible_id) out[", count($created_items), "]($trg_playlist_id)\n";
         }
         return true;
     }
@@ -263,6 +273,7 @@ class SyncCollectionsPlaylists extends Command
                 $missing++;
                 continue;
             }
+            // create a playlist item based on chapter/VersesList
             $this->ensurePlaylistItem($playlist_id, $book_id, $row['Chapter'], $row['VersesList']);
         }
         echo "Missing book records[$missing] Unique missing books[", count($missingBooks), "]\n";

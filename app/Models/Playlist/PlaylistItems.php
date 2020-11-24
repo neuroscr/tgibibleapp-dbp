@@ -510,7 +510,11 @@ class PlaylistItems extends Model implements Sortable
             [$fileset_id, $book_id],
             now()->addDay(),
             function () use ($fileset_id, $book_id) {
-                $bible = BibleFileset::whereId($fileset_id)->first()->bible->first();
+                $fileset = BibleFileset::whereId($fileset_id)->first();
+                if (!$fileset) {
+                    return null;
+                }
+                $bible = $fileset->bible->first();
                 if (!$bible) {
                     return null;
                 }

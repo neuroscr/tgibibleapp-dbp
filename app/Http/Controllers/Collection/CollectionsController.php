@@ -101,7 +101,7 @@ class CollectionsController extends APIController
         });
 
         if ($featured) {
-            $cache_params = [$featured, $limit, $sort_by, $sort_dir, $iso];
+            $cache_params = [$featured, $limit, $sort_by, $sort_dir, $iso, $language_id];
             $collections = cacheRemember('v4_collection_index', $cache_params, now()->addDay(), function () use ($featured, $limit, $sort_by, $sort_dir, $user, $language_id) {
                 return $this->getCollections($featured, $limit, $sort_by, $sort_dir, $user, $language_id);
             });
@@ -119,12 +119,7 @@ class CollectionsController extends APIController
             })
             ->when($featured || empty($user), function ($q) {
                 $q->where('collections.featured', '1');
-            }) /* ->unless($featured, function ($q) use ($user) {
-                $q->join('user_plans', function ($join) use ($user) {
-                    $join->on('user_plans.plan_id', '=', 'plans.id')->where('user_plans.user_id', $user->id);
-                });
-                $q->select(['plans.*', 'user_plans.start_date', 'user_plans.percentage_completed']);
-            }) */
+            })
             ->orderBy($sort_by, $sort_dir)->paginate($limit);
 
         /*
@@ -178,6 +173,7 @@ class CollectionsController extends APIController
             'order_column'          => $order_column,
             'name'                  => $name,
             'featured'              => false,
+            // thumbnail_url is not fillable by user...
         ]);
 
         return $this->reply($collection);
@@ -313,25 +309,6 @@ class CollectionsController extends APIController
 
         $collection->update($update_values);
 
-        /*
-        $days = checkParam('days');
-        $delete_days = checkBoolean('delete_days');
-
-        if ($days || $delete_days) {
-            $days_ids = [];
-            if (!$delete_days) {
-                $days_ids = explode(',', $days);
-                PlanDay::setNewOrder($days_ids);
-            }
-            $deleted_days = PlanDay::whereNotIn('id', $days_ids)
-               ->where('plan_id', $collection->id);
-            $playlists_ids = $deleted_days->pluck('playlist_id')->unique();
-            $playlists = Playlist::whereIn('id', $playlists_ids);
-            $deleted_days->delete();
-            $playlists->delete();
-        }
-        */
-
         $collection = $this->getCollection($collection->id, $user);
 
         return $this->reply($collection);
@@ -454,13 +431,12 @@ class CollectionsController extends APIController
 
     private function getCollection($collection_id, $user, $with_order = false)
     {
-        $select = ['collections.*'];
-        $plan = Collection::with('user')
+        $collection = Collection::with('user')
             ->with('playlists')
             ->where('collections.id', $collection_id)
-            ->select($select)->first();
+            ->select(['collections.*'])->first();
 
-        return $plan;
+        return $collection;
     }
 
     /**
@@ -538,18 +514,36 @@ class CollectionsController extends APIController
      *          name="show_details",
      *          in="query",
      *          @OA\Schema(type="boolean"),
-     *          description="Give full details of the plan"
+     *          description="Give full details of the playlist"
+     *     ),
+     *     @OA\Parameter(
+     *          name="show_items",
+     *          in="query",
+     *          @OA\Schema(type="boolean"),
+     *          description="Give items details of the playlists"
      *     ),
      *     @OA\Parameter(
      *          name="show_text",
      *          in="query",
      *          @OA\Schema(type="boolean"),
-     *          description="Enable the full details of the plan and retrieve the text of the playlists items"
+     *          description="Enable the verse_text of the playlists and retrieve the text of the playlists items"
+     *     ),
+     *     @OA\Parameter(
+     *          name="hide_hls",
+     *          in="query",
+     *          @OA\Schema(type="boolean"),
+     *          description="Disable hls playlist items"
+     *     ),
+     *     @OA\Parameter(
+     *          name="iso",
+     *          in="query",
+     *          @OA\Schema(ref="#/components/schemas/Language/properties/iso"),
+     *          description="The iso code to filter collections by. For a complete list see the `iso` field in the `/languages` route"
      *     ),
      *     @OA\Response(response=200, ref="#/components/responses/plan")
      * )
      *
-     * @param $plan_id
+     * @param $collection_id
      *
      * @return mixed
      *
@@ -571,29 +565,84 @@ class CollectionsController extends APIController
         }
 
         $show_details = checkBoolean('show_details');
+        // default to hide items per Johan
+        $show_items = checkBoolean('show_items');
         $show_text = checkBoolean('show_text');
+        $hide_hls = checkBoolean('hide_hls');
+        $iso = checkParam('iso');
         if ($show_text) {
             $show_details = $show_text;
         }
 
+        $language_id = '';
+        if ($iso) {
+            $language_id = cacheRemember('v4_language_id_from_iso', [$iso], now()->addDay(), function () use ($iso) {
+                return optional(Language::where('iso', $iso)->select('id')->first())->id;
+            });
+        }
+
+        $playlist_controller = new PlaylistsController();
+
+        $result = $collection->toArray();
+
+        $playlists_collection = collect($result['playlists'])->map(
+          function($colPlaylist) use ($playlist_controller, $user) {
+            $playlist = $playlist_controller->getPlaylist($user, $colPlaylist['playlist_id']);
+            return array(
+              'playlist_id' => $colPlaylist['playlist_id'],
+              'name'        => $playlist->name,
+              // Possible fields we may want to include in the future
+              // featured, user_id, plan_id, following, draft?
+              'language_id' => $playlist->language_id,
+              'item_count'       => $playlist->items ? $playlist->items->count() : 0,
+            );
+        });
+
+        // filter collection, strip items
+        $playlists_collection = $playlists_collection->filter(
+          function($colPlaylist) use ($iso, $language_id, $playlist_controller, $user) {
+            // if filtering by language
+            if ($iso) {
+                // get playlist language
+                if ($colPlaylist['language_id'] !== $language_id) {
+                    return false;
+                }
+            }
+            // make sure playlist has data
+            return !!$colPlaylist['item_count'];
+        });
+
+        // this loop takes about 200ms
+        // need the array_values because any gaps will change the json format
+        // it will strip out the playlist_id
+        $result['playlists'] = array_values($playlists_collection->map(
+          function($colPlaylist) {
+            unset($colPlaylist['language_id']);
+            return $colPlaylist;
+        })->toArray());
+
+
         if ($show_details) {
-            $playlist_controller = new PlaylistsController();
             // get those playlists
-            $playlists = $collection->playlists;
-            foreach($playlists as $colPlaylist) {
-                $playlist = $playlist_controller->getPlaylist($user, $colPlaylist->playlist_id);
-                $playlist->path = route('v4_playlists.hls', ['playlist_id'  => $colPlaylist->playlist_id, 'v' => $this->v, 'key' => $this->key]);
-                if ($show_text) {
+            foreach($result['playlists'] as $i => $playlistRow) {
+                $playlist = $playlist_controller->getPlaylist($user, $playlistRow['playlist_id']);
+                if (!$show_items) {
+                    // rehide items
+                    unset($playlist->items);
+                }
+                if (!$hide_hls) {
+                    $playlist->path = route('v4_playlists.hls', ['playlist_id'  => $playlistRow['playlist_id'], 'v' => $this->v, 'key' => $this->key]);
+                }
+                if ($show_items && $show_text) {
                     foreach ($playlist->items as $item) {
                         $item->verse_text = $item->getVerseText();
                     }
                 }
-                $colPlaylist->playlist = $playlist;
+                $result['playlists'][$i] = $playlist;
             }
-            $collection->playlists = $playlists;
         }
 
-        return $this->reply($collection);
+        return $this->reply($result);
     }
 
     /**
@@ -657,7 +706,7 @@ class CollectionsController extends APIController
     }
 
     /**
-     * Remove the specified plan.
+     * Remove the specified collection playlist.
      *
      *  @OA\Delete(
      *     path="/collections/{collection_id}/playlists/{playlist_id}",

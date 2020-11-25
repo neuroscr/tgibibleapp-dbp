@@ -157,6 +157,8 @@ class Highlight extends Model
         $content_config = config('services.content');
         if (empty($content_config['url'])) {
             return $this->belongsTo(Bible::class);
+        } else {
+            return new EmptyRelation();
         }
     }
 

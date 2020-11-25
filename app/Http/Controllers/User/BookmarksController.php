@@ -27,7 +27,7 @@ class BookmarksController extends APIController
      *     tags={"Annotations"},
      *     summary="List a user's bookmarks",
      *     description="",
-     *     operationId="v4_user_annotation_bookmarks.index",
+     *     operationId="v4_internal_user_annotation_bookmarks.index",
      *     security={{"api_token":{}}},
      *     @OA\Parameter(
      *          name="user_id",
@@ -60,10 +60,7 @@ class BookmarksController extends APIController
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_user_bookmarks")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(ref="#/components/schemas/v4_user_bookmarks")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(ref="#/components/schemas/v4_user_bookmarks")),
-     *         @OA\MediaType(mediaType="text/csv",      @OA\Schema(ref="#/components/schemas/v4_user_bookmarks"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_internal_user_bookmarks"))
      *     )
      * )
      *
@@ -146,7 +143,7 @@ class BookmarksController extends APIController
      *     tags={"Annotations"},
      *     summary="Create a bookmark",
      *     description="",
-     *     operationId="v4_user_annotation_bookmarks.store",
+     *     operationId="v4_internal_user_annotation_bookmarks.store",
      *     security={{"api_token":{}}},
      *     @OA\Parameter(
      *          name="user_id",
@@ -167,10 +164,7 @@ class BookmarksController extends APIController
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_user_bookmarks")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(ref="#/components/schemas/v4_user_bookmarks")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(ref="#/components/schemas/v4_user_bookmarks")),
-     *         @OA\MediaType(mediaType="text/csv",      @OA\Schema(ref="#/components/schemas/v4_user_bookmarks"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_internal_user_bookmarks"))
      *     )
      * )
      *
@@ -221,7 +215,7 @@ class BookmarksController extends APIController
      *     tags={"Annotations"},
      *     summary="Update a bookmark",
      *     description="",
-     *     operationId="v4_user_annotation_bookmarks.update",
+     *     operationId="v4_internal_user_annotation_bookmarks.update",
      *     security={{"api_token":{}}},
      *     @OA\Parameter(name="user_id", in="path", required=true, @OA\Schema(ref="#/components/schemas/User/properties/id")),
      *     @OA\Parameter(name="bookmark_id", in="path", required=true, @OA\Schema(ref="#/components/schemas/User/properties/id")),
@@ -236,10 +230,7 @@ class BookmarksController extends APIController
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_user_bookmarks")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(ref="#/components/schemas/v4_user_bookmarks")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(ref="#/components/schemas/v4_user_bookmarks")),
-     *         @OA\MediaType(mediaType="text/csv",      @OA\Schema(ref="#/components/schemas/v4_user_bookmarks"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_internal_user_bookmarks"))
      *     )
      * )
      *
@@ -282,17 +273,14 @@ class BookmarksController extends APIController
      *     tags={"Annotations"},
      *     summary="Delete a bookmark",
      *     description="",
-     *     operationId="v4_user_annotation_bookmarks.delete",
+     *     operationId="v4_internal_user_annotation_bookmarks.delete",
      *     security={{"api_token":{}}},
      *     @OA\Parameter(name="user_id", in="path", required=true, @OA\Schema(ref="#/components/schemas/User/properties/id")),
      *     @OA\Parameter(name="bookmark_id", in="path", required=true, @OA\Schema(ref="#/components/schemas/User/properties/id")),
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(type="string")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(type="string")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(type="string")),
-     *         @OA\MediaType(mediaType="text/csv",      @OA\Schema(type="string"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(type="string"))
      *     )
      * )
      *
@@ -327,7 +315,7 @@ class BookmarksController extends APIController
             'book_id'     => ((request()->method() === 'POST') ? 'required|' : '') . (empty($content_config['url']) ? 'exists:dbp.books,id' : ''),
             'chapter'     => ((request()->method() === 'POST') ? 'required|' : '') . 'max:150|min:1|integer',
             'verse_start' => ((request()->method() === 'POST') ? 'required|' : '') . 'max:177|min:1|integer'
-        ];
+        ]);
         $content_config = config('services.content');
         $errors = array();
         if (empty($content_config['url'])) {

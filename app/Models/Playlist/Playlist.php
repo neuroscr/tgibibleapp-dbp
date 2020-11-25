@@ -171,11 +171,6 @@ class Playlist extends Model
 
     public function items()
     {
-        $content_config = config('services.content');
-        if (empty($content_config['url'])) {
-            return $this->hasMany(PlaylistItems::class)->orderBy('order_column');
-        } else {
-            return new EmptyRelation();
-        }
+        return $this->hasMany(PlaylistItems::class)->orderBy('order_column');
     }
 }

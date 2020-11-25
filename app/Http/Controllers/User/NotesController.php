@@ -8,8 +8,10 @@ use App\Transformers\UserNotesTransformer;
 use Illuminate\Http\Request;
 use League\Fractal\Pagination\IlluminatePaginatorAdapter;
 use Validator;
+use App\Services\ContentServiceProvider;
 use App\Traits\CheckProjectMembership;
 use App\Traits\AnnotationTags;
+use GuzzleHttp\Client;
 
 class NotesController extends APIController
 {
@@ -24,7 +26,7 @@ class NotesController extends APIController
      *     tags={"Annotations"},
      *     summary="List a user's notes",
      *     description="Query information about a user's notes",
-     *     operationId="v4_notes.index",
+     *     operationId="v4_internal_notes.index",
      *     security={{"api_token":{}}},
      *     @OA\Parameter(name="user_id",     in="path", required=true, description="The user who created the note", @OA\Schema(ref="#/components/schemas/User/properties/id")),
      *     @OA\Parameter(name="bible_id",    in="query", description="If provided the fileset_id will filter results to only those related to the Bible", @OA\Schema(ref="#/components/schemas/BibleFileset/properties/id")),
@@ -45,10 +47,7 @@ class NotesController extends APIController
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_notes_index")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(ref="#/components/schemas/v4_notes_index")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(ref="#/components/schemas/v4_notes_index")),
-     *         @OA\MediaType(mediaType="text/csv",      @OA\Schema(ref="#/components/schemas/v4_notes_index"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_internal_notes_index"))
      *     )
      * )
      *
@@ -73,6 +72,15 @@ class NotesController extends APIController
         $limit      = ($limit > 50) ? 50 : $limit;
         $query      = checkParam('query');
 
+        $content_config = config('services.content');
+        $map = array();
+        if (!empty($content_config['url']) && $query) {
+            $client = new Client();
+            $res = $client->get($content_config['url'] . 'bibles/book/search/'.
+                $query.'?v=4&key=' . $content_config['key']);
+            $map = json_decode($res->getBody() . '', true);
+        }
+
         $notes = Note::with('tags')
             ->where('user_notes.user_id', $user_id)
             ->when($bible_id, function ($q) use ($bible_id) {
@@ -83,18 +91,37 @@ class NotesController extends APIController
                 $q->orderBy('user_notes.' . $sort_by, $sort_dir);
             })->when($chapter_id, function ($q) use ($chapter_id) {
                 $q->where('user_notes.chapter', $chapter_id);
-            })->when($query, function ($q) use ($query) {
-                $dbp_database = config('database.connections.dbp.database');
-                $q->join($dbp_database . '.bible_books as bible_books', function ($join) use ($query) {
-                    $join->on('user_notes.bible_id', '=', 'bible_books.bible_id')
-                        ->on('user_notes.book_id', '=', 'bible_books.book_id');
-                });
-                $q->where('bible_books.name', 'like', '%' . $query . '%');
+            })->when($query, function ($q) use ($query, $content_config, $map) {
+                if (empty($content_config['url'])) {
+                    // Local content
+                    $dbp_database = config('database.connections.dbp.database');
+                    $q->join($dbp_database . '.bible_books as bible_books', function ($join) use ($query) {
+                        $join->on('user_notes.bible_id', '=', 'bible_books.bible_id')
+                             ->on('user_notes.book_id', '=', 'bible_books.book_id');
+                    });
+                    $q->where('bible_books.name', 'like', '%' . $query . '%');
+                } else {
+                    // Remote content
+                    // do the bible_id filter list
+                    $q->whereIn('user_notes.bible_id', array_keys($map));
+                }
             })->paginate($limit);
+
+        // do we need final filter?
+        if (!empty($content_config['url']) && $query) {
+            // filter by book_id $query filter
+            $collection = $notes->getCollection(); // get collections for modification
+            $final_notes = $collection->filter(function($note) use ($map) {
+                // only include where we have bible_id and book_id in $map
+                return in_array($note->book_id, $map[$note->bible_id]);
+            });
+            $notes->setCollection($final_notes); // save back into notes
+        }
 
         if (!$notes) {
             return $this->setStatusCode(404)->replyWithError('No User found for the specified ID');
         }
+
         return $this->reply(fractal($notes->getCollection(), UserNotesTransformer::class)->paginateWith(new IlluminatePaginatorAdapter($notes)));
     }
 
@@ -106,17 +133,14 @@ class NotesController extends APIController
      *     tags={"Annotations"},
      *     summary="Get a Note",
      *     description="",
-     *     operationId="v4_notes.show",
+     *     operationId="v4_internal_notes.show",
      *     security={{"api_token":{}}},
      *     @OA\Parameter(name="user_id",     in="path",required=true, description="The user who created the note", @OA\Schema(ref="#/components/schemas/User/properties/id")),
      *     @OA\Parameter(name="note_id",     in="path",required=true, description="The note currently being altered", @OA\Schema(ref="#/components/schemas/Note/properties/id")),
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_note")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(ref="#/components/schemas/v4_note")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(ref="#/components/schemas/v4_note")),
-     *         @OA\MediaType(mediaType="text/csv",      @OA\Schema(ref="#/components/schemas/v4_note"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_note"))
      *     )
      * )
      *
@@ -149,7 +173,7 @@ class NotesController extends APIController
      *     tags={"Annotations"},
      *     summary="Store a Note",
      *     description="",
-     *     operationId="v4_notes.store",
+     *     operationId="v4_internal_notes.store",
      *     security={{"api_token":{}}},
      *     @OA\Parameter(name="user_id",     in="path", required=true, description="The user who is creating the note", @OA\Schema(ref="#/components/schemas/User/properties/id")),
      *     @OA\RequestBody(required=true, description="Fields for Note Creation", @OA\MediaType(mediaType="application/json",
@@ -166,10 +190,7 @@ class NotesController extends APIController
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_highlights_index")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(ref="#/components/schemas/v4_highlights_index")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(ref="#/components/schemas/v4_highlights_index")),
-     *         @OA\MediaType(mediaType="text/csv",      @OA\Schema(ref="#/components/schemas/v4_highlights_index"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(ref="#/components/schemas/v4_internal_highlights_index"))
      *     )
      * )
      *
@@ -215,7 +236,7 @@ class NotesController extends APIController
      *     tags={"Annotations"},
      *     summary="Update a Note",
      *     description="",
-     *     operationId="v4_notes.update",
+     *     operationId="v4_internal_notes.update",
      *     security={{"api_token":{}}},
      *     @OA\Parameter(name="user_id", in="path", required=true, description="The user who created the note", @OA\Schema(ref="#/components/schemas/User/properties/id")),
      *     @OA\Parameter(name="note_id", in="path", required=true, description="The note currently being altered", @OA\Schema(ref="#/components/schemas/Note/properties/id")),
@@ -232,10 +253,7 @@ class NotesController extends APIController
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(type="string")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(type="string")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(type="string")),
-     *         @OA\MediaType(mediaType="text/csv",      @OA\Schema(type="string"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(type="string"))
      *     )
      * )
      *
@@ -283,17 +301,14 @@ class NotesController extends APIController
      *     tags={"Annotations"},
      *     summary="Delete a Note",
      *     description="",
-     *     operationId="v4_notes.destroy",
+     *     operationId="v4_internal_notes.destroy",
      *     security={{"api_token":{}}},
      *     @OA\Parameter(name="user_id", in="path", required=true, description="The user who created the note", @OA\Schema(ref="#/components/schemas/User/properties/id")),
      *     @OA\Parameter(name="note_id", in="path", required=true, description="The note currently being deleted", @OA\Schema(ref="#/components/schemas/Note/properties/id")),
      *     @OA\Response(
      *         response=200,
      *         description="successful operation",
-     *         @OA\MediaType(mediaType="application/json", @OA\Schema(type="string")),
-     *         @OA\MediaType(mediaType="application/xml",  @OA\Schema(type="string")),
-     *         @OA\MediaType(mediaType="text/x-yaml",      @OA\Schema(type="string")),
-     *         @OA\MediaType(mediaType="text/csv",      @OA\Schema(type="string"))
+     *         @OA\MediaType(mediaType="application/json", @OA\Schema(type="string"))
      *     )
      * )
      *
@@ -322,14 +337,16 @@ class NotesController extends APIController
 
     private function invalidNote($request)
     {
+        $content_config = config('services.content');
         $validator = Validator::make($request->all(), [
-            'bible_id'    => (($request->method === 'POST') ? 'required|' : '') . 'exists:dbp.bibles,id',
             'user_id'     => (($request->method === 'POST') ? 'required|' : '') . 'exists:dbp_users.users,id',
-            'book_id'     => (($request->method === 'POST') ? 'required|' : '') . 'exists:dbp.books,id',
             'chapter'     => (($request->method === 'POST') ? 'required|' : '') . 'max:150|min:1',
             'verse_start' => (($request->method === 'POST') ? 'required|' : '') . 'max:177|min:1',
             'notes'       => (($request->method === 'POST') ? 'required|' : '') . '',
+            'bible_id'    => (($request->method === 'POST') ? 'required|' : '') . (empty($content_config['url']) ? 'exists:dbp.bibles,id' : 'remote_biblebook_checker'),
+            'book_id'     => (($request->method === 'POST') ? 'required|' : '') . (empty($content_config['url']) ? 'exists:dbp.books,id' : '')
         ]);
+
         if ($validator->fails()) {
             return ['errors' => $validator->errors()];
         }

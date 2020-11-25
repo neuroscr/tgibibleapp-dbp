@@ -801,6 +801,31 @@ class PlaylistsController extends APIController
             $bible_language = $bible->language->name;
         } else {
             // Remote content, combined bible/audio check
+
+            $bible_data = cacheRemember('bible_get_audio', [$bible_id], now()->addDay(), function () use ($bible_id, $config) {
+                $client = new Client();
+                $res = $client->get($config['url'] . 'bibles/' . $bible_id .
+                  '?v=4&key=' . $config['key']);
+                $result = json_decode($res->getBody() . '', true);
+                //echo "<pre>", print_r($result['data'], 1), "</pre>\n";
+                $filesets = collect($result['data']['filesets']['dbp-prod']);
+                $bible_audio_filesets = $filesets->filter(function($fileset) {
+                    // keep it if it has audio in the name...
+                    return strpos($fileset['type'], 'audio') !== false;
+                })->map(function($fileset) {
+                  return (object)array(
+                    'id'            => $fileset['id'],
+                    'set_type_code' => $fileset['type'],
+                    'set_size_code' => $fileset['size'],
+                  );
+                });
+                return array('audiofs'=>$bible_audio_filesets, 'lang'=>$result['data']['language']);
+            });
+            $bible_audio_filesets = $bible_data['audiofs'];
+            $bible_language = $bible_data['lang'];
+            //$bible_language = '';
+
+            /*
             $client = new Client();
             $res = $client->get($config['url'] . 'bibles/' . $bible_id .
               '/audio?v=4&key=' . $config['key']);
@@ -808,6 +833,7 @@ class PlaylistsController extends APIController
             $bible_language = $bible_data->language;
             // convert to a collection
             $bible_audio_filesets = collect($bible_data->audio);
+            */
         }
 
         $playlist = $this->getPlaylist(false, $playlist_id);
@@ -1288,11 +1314,11 @@ class PlaylistsController extends APIController
             // remote content
 
             // get a unique lists of filesets we need to look up
-            if (count($playlist->items)) {
-                $fileset_ids = $playlist->items->map(function ($item) {
-                  return $item->fileset_id;
-                })->unique();
+            $fileset_ids = $playlist->items->map(function ($item) {
+              return $item->fileset_id;
+            })->unique();
 
+            if ($fileset_ids->count()) {
                 // query content server
                 $client = new Client();
                 $res = $client->get($config['url'] . 'bibles/filesets/'.

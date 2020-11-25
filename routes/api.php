@@ -23,7 +23,6 @@ Route::name('v4_bible.one')->get('bibles/{bible_id}',                           
 Route::name('v4_bible.all')->get('bibles',                                         'Bible\BiblesController@index');
 Route::name('v4_bible.defaults')->get('bibles/defaults/types',                     'Bible\BiblesController@defaults');
 Route::name('v4_bible.copyright')->get('bibles/{bible_id}/copyright',              'Bible\BiblesController@copyright');
-Route::name('v4_bible.getAudio')->get('bibles/{bible_id?}/audio',                  'Bible\BiblesController@getAudio');
 Route::name('v4_bible.chapter')
     ->middleware('APIToken')->get('bibles/{bible_id}/chapter',                     'Bible\BiblesController@chapter');
 Route::name('v4_bible.chapter.annotations')

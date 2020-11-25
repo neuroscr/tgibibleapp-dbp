@@ -893,19 +893,6 @@ class BiblesController extends APIController
         return false;
     }
 
-    public function getAudio($bible_id) {
-        $bible = cacheRemember('bible_translate', [$bible_id], now()->addDay(), function () use ($bible_id) {
-            return Bible::whereId($bible_id)->first();
-        });
-        $audio_fileset_types = collect(['audio_stream', 'audio_drama_stream', 'audio', 'audio_drama']);
-        $bible_audio_filesets = $bible->filesets->whereIn('set_type_code', $audio_fileset_types);
-
-        return $this->reply(array(
-            'language'=>$bible->language->name,
-            'audio'=>$bible_audio_filesets,
-        ));
-    }
-
     private function getAudioFilesetData($results, $bible, $book, $chapter, $type, $name, $download = false, $secondary_type, $secondary_name, $get_secondary = false)
     {
         $fileset_controller = new BibleFileSetsController();

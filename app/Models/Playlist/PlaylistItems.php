@@ -341,33 +341,40 @@ class PlaylistItems extends Model implements Sortable
         // if configured to use content server
         if (!empty($content_config['url'])) {
             // use content server
+            $verses = array();
+            $client = new Client(['http_errors' => false]);
 
-            $cache_params = [$this['fileset_id'], $this['book_id'], $this['chapter_start'], $this['chapter_end'], $this['verse_start'], $this['verse_end']];
-            $verses = cacheRemember('playlist_item_text_by_fileset', $cache_params, now()->addDay(), function () use ($content_config) {
-                $client = new Client();
-                $addl = '';
-                if ($this['verse_start'] && $this['verse_end']) {
-                    $addl = '&verse_start='.$this['verse_start'] .
-                      '&verse_end='  .$this['verse_end'];
-                }
-                $res = $client->get($content_config['url'] . 'bibles/filesets/' .
-                    $this['fileset_id'] . '/verses?v=4&key=' . $content_config['key'] .
-                    '&book_id=' . $this['book_id'] .
-                    '&chapter_start='.$this['chapter_start'] .
-                    '&chapter_end='  .$this['chapter_end'] .
-                    $addl
-                );
-                $results = json_decode($res->getBody() . '', true);
-                $verses = array();
-                if (count($results['books'])) {
-                    // first book since we queried by book_id
-                    foreach($results['books'][0]['verses'] as $varr) {
-                      $verses[] = $varr[3];
+            $addl = '';
+            if ($this['verse_start'] && $this['verse_end']) {
+                $addl = '&verse_start='.$this['verse_start'] .
+                  '&verse_end='  .$this['verse_end'];
+            }
+
+            // usually chapter_start will be the same as chapter_end
+            for($chapter = $this['chapter_start']; $chapter <= $this['chapter_end']; $chapter++) {
+                $cache_params = [$this['fileset_id'], $this['book_id'], $this['chapter'], $this['verse_start'], $this['verse_end']];
+                $new_verses = cacheRemember('playlist_item_text_by_fileset', $cache_params,
+                  now()->addDay(), function () use ($content_config, $client, $chapter, $addl) {
+                    $verses = array();
+                    $res = $client->get($content_config['url'] . 'bibles/filesets/' .
+                      substr($this['fileset_id'], 0, 6) . '/' . $this['book_id'] .
+                      '/'. $chapter . '?v=4&key=' . $content_config['key'] .
+                      $addl);
+                    $results = json_decode($res->getBody() . '', true);
+                    if (isset($results['error'])) {
+                        if ($results['error']['status_code'] == 404) {
+                            echo "No [", $this['fileset_id'],"][", $this['book_id'], "]<br>\n";
+                        }
+                    } else {
+                        foreach($results['data'] as $data) {
+                            $verses[] = $data['verse_text'];
+                        }
                     }
-                }
-                return $verses;
-            });
-
+                    return $verses;
+                });
+                $verses = array_merge($verses, $new_verses);
+            }
+            unset($client); // free memory
         } else {
             // content is local
 

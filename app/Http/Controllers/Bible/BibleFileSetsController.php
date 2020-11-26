@@ -106,7 +106,7 @@ class BibleFileSetsController extends APIController
                     'bible_files.verse_end',
                     'bible_files.file_name',
                     'bible_books.name as book_name',
-                    'books.protestant_order as book_order'
+                    'books.protestant_order as book_order',
                 ]);
 
             if ($type === 'video_stream') {
@@ -116,7 +116,6 @@ class BibleFileSetsController extends APIController
             }
 
             $fileset_chapters = $query->get();
-
             if ($fileset_chapters->count() === 0) {
                 return $this->setStatusCode(404)->replyWithError('No Fileset Chapters Found for the provided params');
             }
@@ -208,11 +207,11 @@ class BibleFileSetsController extends APIController
         ), [], '');
     }
 
-    public function getPlaylistMeta()
+    public function getPlaylistMeta($fileset_ids)
     {
         // laravel pass array from route to controller
         // https://stackoverflow.com/a/47695952/287696
-        $filesets = explode(',', checkParam('fileset_id'));
+        $filesets = explode(',', $fileset_ids);
 
         // lookup filesets and get hashes
         $filesets_hashes = DB::connection('dbp')
@@ -244,6 +243,14 @@ class BibleFileSetsController extends APIController
         foreach ($filesets as $fileset) {
             // need text
             // get bible_id for this fileset
+            if (!isset($fileset_text_info[$fileset]) || !isset($bible_hash[$fileset_text_info[$fileset]])) {
+                if (!isset($fileset_text_info[$fileset])) {
+                    echo "No [$fileset]<Br>\n";
+                } else {
+                    echo "No Bible[", $fileset_text_info[$fileset], "]<Br>\n";
+                }
+                continue;
+            }
             $bible_id = $bible_hash[$fileset_text_info[$fileset]];
             // fetch text for bible_id
             $fileset_text_info[$fileset] = $text_filesets[$bible_id];
@@ -568,18 +575,24 @@ class BibleFileSetsController extends APIController
             }
         }
 
-        if (!$is_stream) {
-            foreach ($fileset_chapters as $key => $fileset_chapter) {
-                $fileset_chapters[$key]->file_name = $this->signedUrl($this->signedPath($bible, $fileset, $fileset_chapter), $asset_id, random_int(0, 10000000));
+        // do we have a signing key?
+        $hasSigningKey = config('filesystems.disks.cloudfront.key');
+        if ($hasSigningKey) {
+            if (!$is_stream) {
+                foreach ($fileset_chapters as $key => $fileset_chapter) {
+                    //$fileset_chapters[$key]->file_name = $this->signedUrl($this->signedPath($bible, $fileset, $fileset_chapter), $asset_id, random_int(0, 10000000));
+                }
             }
-        }
 
-
-        if ($is_video) {
-            foreach ($fileset_chapters as $key => $fileset_chapter) {
-                $fileset_chapters[$key]->thumbnail = $this->signedUrl('video/thumbnails/' . $fileset_chapters[$key]->book_id . '_' . str_pad($fileset_chapter->chapter_start, 2, '0', STR_PAD_LEFT) . '.jpg', $asset_id, random_int(0, 10000000));
+            if ($is_video) {
+                if (empty($content_config['url'])) {
+                    // we're a content provider, so we'll sign
+                    foreach ($fileset_chapters as $key => $fileset_chapter) {
+                        //$fileset_chapters[$key]->thumbnail = $this->signedUrl('video/thumbnails/' . $fileset_chapters[$key]->book_id . '_' . str_pad($fileset_chapter->chapter_start, 2, '0', STR_PAD_LEFT) . '.jpg', $asset_id, random_int(0, 10000000));
+                    }
+                }
             }
-        }
+        } // end hasSigningKey
 
         return $fileset_chapters;
     }

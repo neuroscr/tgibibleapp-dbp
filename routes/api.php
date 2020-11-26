@@ -38,10 +38,6 @@ Route::name('v4_filesets.copyright')->get('bibles/filesets/{fileset_id}/copyrigh
 Route::name('v4_filesets.show')->get('bibles/filesets/{fileset_id}',              'Bible\BibleFileSetsController@show');
 
 Route::name('v4_filesets.showMultiple')->get('bibles/filesets/{fileset_ids}/playlist', 'Bible\BibleFileSetsController@getPlaylistMeta');
-// v4_filesets.chapter has access control issues
-// which should now be fixed...
-Route::name('v4_internal_filesets.bibleVerses')->get('bibles/filesets/{fileset_id}/verses',              'Bible\BibleFileSetsController@bibleVerses');
-
 Route::name('v4_filesets.update')->put('bibles/filesets/{fileset_id}',             'User\Dashboard\BibleFilesetsManagementController@update');
 Route::name('v4_filesets.store')->post('bibles/filesets',             'User\Dashboard\BibleFilesetsManagementController@store');
 Route::name('v4_filesets.books')->get('bibles/filesets/{fileset_id}/books',        'Bible\BooksController@show');
